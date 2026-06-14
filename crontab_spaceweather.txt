@@ -1,0 +1,15 @@
+# 空间天气数据采集定时任务
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# 每小时采集一次太阳风和地磁数据
+0 * * * * cd /Users/cheenle/pskreporter && /Users/cheenle/pskreporter/venv/bin/python3 /Users/cheenle/pskreporter/space_weather_collector_quick.py >> /Users/cheenle/pskreporter/logs/spaceweather.log 2>&1
+
+# 每天凌晨2点采集F10.7和太阳黑子数据
+0 2 * * * cd /Users/cheenle/pskreporter && /Users/cheenle/pskreporter/venv/bin/python3 /Users/cheenle/pskreporter/space_weather_collector_daily.py >> /Users/cheenle/pskreporter/logs/spaceweather_daily.log 2>&1
+
+# 每6小时更新日出日落时间
+0 */6 * * * cd /Users/cheenle/pskreporter && /Users/cheenle/pskreporter/venv/bin/python3 /Users/cheenle/pskreporter/update_suntimes.py >> /Users/cheenle/pskreporter/logs/suntimes.log 2>&1
+
+# PSK Reporter 数据采集 (每30分钟，避免限流)
+*/30 * * * * cd /Users/cheenle/pskreporter && /Users/cheenle/pskreporter/venv/bin/python3 /Users/cheenle/pskreporter/pskreporter_all.py >> /Users/cheenle/pskreporter/logs/pskreporter_all.log 2>&1

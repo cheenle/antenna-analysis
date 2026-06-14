@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSK Automatic Propagation Reporter -- for Developers</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin: 15px 0;
+        }
+        .important {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 10px 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>PSK Automatic Propagation Reporter -- for Developers</h1>
+
+<p>This is a project to automatically gather reception records of PSK activity and then make those records available in near realtime to interested parties — typically the amateur who initiated the communication. The way that it works is that many amateurs will run a client that will monitor received traffic for callsigns (the pattern 'de callsign callsign' or others) and, when seen, will report this fact. This is of interest to the amateur who transmitted and they will be able to see where their signal was received. The pattern chosen is typically part of a standard CQ call. The duplicate check is to make sure that the callsign is not corrupted. This is not meant to be the exhaustive list of patterns to check. There is opportunity for innovation here. Also, this project was originally conceived for PSK use, but it is not specific to that mode. Most of the panoramic receivers have PSK decoders, which is what makes this work so well. If there was a panoramic RTTY decoder, then I would encourage submission of that data as well.</p>
+
+<p>The way that this would be used is that an amateur would call CQ and could then (within a few minutes) see where his signal was received. This can be useful in determining propagation conditions or in adjusting antenna and/or radio parameters. It will also provide an archive of reception records that can be used for research purposes.</p>
+
+<p>There are a number of parts to this project, as shown in the picture below. Each is dealt with separately.</p>
+
+<p><img src="https://pskreporter.info/pskdiag.png" alt="PSK Reporter Diagram"></p>
+
+<h2>Data Gathering</h2>
+
+<p>The data is gathered (somehow) from the client used to decode the PSK traffic. This is not standardized as it depends on the details of the client. Some clients are capable of decoding the entire audio passband simultaneously and these can provide a great deal of useful information.</p>
+
+<p>The data consists of the calling callsign (at a minimum). Highly desirable extra fields are the frequency, signal to noise ratio and intermodulation distortion. Note that each callsign should be reported no more than once per five minute period. Ideally, a callsign should be reported only once per hour if it has not 'changed'. Precisely what constitutes a change is left to the discretion of the developer, but the goal is to minimize the number of database records! A change might be a move to a different band.</p>
+
+<p>Authors of PSK software are encouraged to implement the data reporting protocol as described in the next section.</p>
+
+<h2>Data Reporting</h2>
+
+<p>Once the data has been gathered (and duplicate callsigns eliminated), it is formatted into UDP datagrams and transmitted to <code>report.pskreporter.info</code> port <code>4739</code>.</p>
+
+<p>The datagrams should be sent at a rate of no more than one every five minutes (unless the packet becomes full). <strong>Timed sends of packets must not be synchronized to the system clock.</strong> Any flushing of packets on timers can be based on when the program started. If it is based on when the last signal was received, then please add some randomization to the five minute timer. This is to prevent a significant number of stations from reporting at the same time.</p>
+
+<p>The IPFIX packet format contains (at a very high level) two parts — a number of record format descriptors that describe the format of the data part, and the data part. The record format descriptors only need be transmitted once per hour, but probably should be transmitted for the first three packets when the application starts (this is due to the lossy nature of UDP). Note that the same UDP source port number should be used to send each of the datagrams. The server saves these record format descriptors and uses them to decode packets which do not contain them.</p>
+
+<p>The data part of the packet contain two sub-parts. The first is the receiver information record, and the second is the list of senders that have been detected (sender information block containing one or more sender information records).</p>
+
+<p>For the technically inclined, read the next section. For the people who just want to hack together the packet sender, skip the next section, and move to the Cookie Cutter section.</p>
+
+<h3>Technical IPFIX Information</h3>
+
+<p>The attributes used for this application are:</p>
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Attribute Id</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>senderCallsign</td>
+<td>30351.1</td>
+<td>string</td>
+<td>The callsign of the sender of the transmission.</td>
+</tr>
+<tr>
+<td>receiverCallsign</td>
+<td>30351.2</td>
+<td>string</td>
+<td>The callsign of the receiver of the transmission.</td>
+</tr>
+<tr>
+<td>senderLocator</td>
+<td>30351.3</td>
+<td>string</td>
+<td>The locator of the sender of the transmission.</td>
+</tr>
+<tr>
+<td>receiverLocator</td>
+<td>30351.4</td>
+<td>string</td>
+<td>The locator of the receiver of the transmission.</td>
+</tr>
+<tr>
+<td>frequency</td>
+<td>30351.5</td>
+<td>unsignedInteger</td>
+<td>The frequency of the transmission in Hertz.</td>
+</tr>
+<tr>
+<td>sNR</td>
+<td>30351.6</td>
+<td>integer</td>
+<td>The signal to noise ration of the transmission. Normally 1 byte.</td>
+</tr>
+<tr>
+<td>iMD</td>
+<td>30351.7</td>
+<td>integer</td>
+<td>The intermodulation distortion of the transmission. Normally 1 byte.</td>
+</tr>
+<tr>
+<td>decoderSoftware</td>
+<td>30351.8</td>
+<td>string</td>
+<td>The name and version of the decoding software.</td>
+</tr>
+<tr>
+<td>antennaInformation</td>
+<td>30351.9</td>
+<td>string</td>
+<td>A freeform description of the receiving antenna.</td>
+</tr>
+<tr>
+<td>mode</td>
+<td>30351.10</td>
+<td>string</td>
+<td>The mode of the communication. One of the ADIF values for MODE or SUBMODE.</td>
+</tr>
+<tr>
+<td>informationSource</td>
+<td>30351.11</td>
+<td>integer</td>
+<td>Identifies the source of the record. The bottom 2 bits have the following meaning: 1 = Automatically Extracted. 2 = From a Call Log (QSO). 3 = Other Manual Entry. The 0x80 bit indicates that this record is a test transmission. Normally 1 byte.</td>
+</tr>
+<tr>
+<td>persistentIdentifier</td>
+<td>30351.12</td>
+<td>string</td>
+<td>Random string that identifies the sender. This may be used in the future as a primitive form of security.</td>
+</tr>
+<tr>
+<td>flowStartSeconds</td>
+<td>150</td>
+<td>dateTimeSeconds (Integer)</td>
+<td>The time of the transmission (absolute seconds since 1/1/1970).</td>
+</tr>
+<tr>
+<td>rigInformation</td>
+<td>30351.13</td>
+<td>string</td>
+<td>A description of the Rig in use. Preferably include most significant information first so entries can be grouped automatically.</td>
+</tr>
+<tr>
+<td>messageBits</td>
+<td>30351.14</td>
+<td>bytes</td>
+<td>This is the raw decoded message data. There may be surplus bits at the end. The mode will be used to decode the contents of the bytes. FT8 will have 10 bytes with 5 bits at the end unused. The most significant bit of the first byte is the first bit.</td>
+</tr>
+<tr>
+<td>deltaT</td>
+<td>30351.15</td>
+<td>int16</td>
+<td>This is the time offset of the message received from the start of the transmission period. This is measured in milliseconds. The value 0x8000 is treated as the unknown/null value.</td>
+</tr>
+</tbody>
+</table>
+
+<p>Most of the attributes are enterprise specific, and use the enterprise number 30351 which is registered to me.</p>
+
+<p>Some of these attributes are used in the sender information records, and some are used in the single receiver information record. The receiver information record should appear in each datagram.</p>
+
+<p>The sender information records should contain as many as possible of: senderCallsign, frequency*, iMD*, sNR*, mode, informationSource, senderLocator*, flowStartSeconds. The starred fields are optional, and the others not.</p>
+
+<p>The receiver information record should contain as many as possible of: receiverCallsign, receiverLocator, decodingSoftware, antennaInformation*.</p>
+
+<p>The variable length encoding should be used for string fields. This probably gives about 16 bytes (on average) per reception record, and so a datagram can hold 80 to 90 records. This limit is unlikely to be reached in five minutes.</p>
+
+<p>The record format descriptor should be transmitted at least once per hour, and on the first few packets on startup.</p>
+
+<h3>Cookie Cutter Information</h3>
+
+<p>The packet format appears to be complex, but there is a lot of boilerplate. The packet is assembled out of a set of pieces, with the actual data appended to the end.</p>
+
+<p>All values are transmitted in 'network order'. This is with the most significant byte of an integer being transmitted first. Note that this <em>not</em> the same byte ordering as a PC. The C functions htonl/htons will do the appropriate conversions (for all platforms).</p>
+
+<p>For a definition of the fields, see the attributes table above.</p>
+
+<h4>Header</h4>
+
+<p>The header contains the overall length of the packet. It also contains a sequence number and the time of transmission.</p>
+
+<pre>00 0A ll ll tt tt tt tt ss ss ss ss ii ii ii ii</pre>
+
+<p>Where:</p>
+<ul>
+<li><code>ll ll</code> - Total packet length</li>
+<li><code>tt tt tt tt</code> - Time of transmission (Unix timestamp)</li>
+<li><code>ss ss ss ss</code> - Sequence number</li>
+<li><code>ii ii ii ii</code> - Source ID</li>
+</ul>
+
+<h4>Record Format Descriptor</h4>
+
+<p>The record format descriptors define the precise layout of the data portion of the datagram. The descriptors do not need to appear in every datagram. They are cached by the receiving process. However, it is good practice to send them in the first three datagrams sent on application startup, and then once per hour thereafter.</p>
+
+<p>There are two format descriptors, one for the sender information record, and one for the receiver information record. In each case, there are a number of different descriptors to pick — they have different fields. Pick the one that matches the data that you have available.</p>
+
+<p>The two descriptors (one for the receiver information record, and the other for the sender information records) can occur in either order in the packet. Indeed they can be omitted as well once they have been transmitted a few times (to ensure that the server has cached them).</p>
+
+<p><strong>Receiver information record format descriptors:</strong></p>
+
+<p>For receiverCallsign, receiverLocator, decodingSoftware use:</p>
+<pre>00 03 00 24 99 92 00 03 00 01 80 02 FF FF 00 00 76 8F 80 04 FF FF 00 00 76 8F 80 08 FF FF 00 00 76 8F 00 00</pre>
+
+<p>For receiverCallsign, receiverLocator, decodingSoftware, antennaInformation use:</p>
+<pre>00 03 00 2C 99 92 00 04 00 01 80 02 FF FF 00 00 76 8F 80 04 FF FF 00 00 76 8F 80 08 FF FF 00 00 76 8F 80 09 FF FF 00 00 76 8F 00 00</pre>
+
+<p><strong>Sender information record format descriptors:</strong></p>
+
+<p>All integer fields are 4 bytes unless noted. This means that the default templates only support frequencies up to ~4GHz. Changing the frequency definition to be 5 bytes gets a limit of 1THz. I.e. change the <code>04</code> to <code>05</code> in the line starting <code>80 05</code>, and then send a 5 byte frequency.</p>
+
+<p>For senderCallsign, frequency, mode, informationSource (1 byte), flowStartSeconds use:</p>
+<pre>00 02 00 2C 99 93 00 05 80 01 FF FF 00 00 76 8F 80 05 00 04 00 00 76 8F 80 0A FF FF 00 00 76 8F 80 0B 00 01 00 00 76 8F 00 96 00 04</pre>
+
+<p>For senderCallsign, frequency, mode, informationSource (1 byte), senderLocator, flowStartSeconds use:</p>
+<pre>00 02 00 34 99 93 00 06 80 01 FF FF 00 00 76 8F 80 05 00 04 00 00 76 8F 80 0A FF FF 00 00 76 8F 80 0B 00 01 00 00 76 8F 80 03 FF FF 00 00 76 8F 00 96 00 04</pre>
+
+<p>For senderCallsign, frequency, sNR (1 byte), iMD (1 byte), mode, informationSource (1 byte), flowStartSeconds use:</p>
+<pre>00 02 00 3C 99 93 00 07 80 01 FF FF 00 00 76 8F 80 05 00 04 00 00 76 8F 80 06 00 01 00 00 76 8F 80 07 00 01 00 00 76 8F 80 0A FF FF 00 00 76 8F 80 0B 00 01 00 00 76 8F 00 96 00 04</pre>
+
+<p>For senderCallsign, frequency, sNR (1 byte), iMD (1 byte), mode, informationSource (1 byte), senderLocator, flowStartSeconds use:</p>
+<pre>00 02 00 44 99 93 00 08 80 01 FF FF 00 00 76 8F 80 05 00 04 00 00 76 8F 80 06 00 01 00 00 76 8F 80 07 00 01 00 00 76 8F 80 0A FF FF 00 00 76 8F 80 0B 00 01 00 00 76 8F 80 03 FF FF 00 00 76 8F 00 96 00 04</pre>
+
+<p>Note that the two values <code>99 92</code> and <code>99 93</code> are the linking values that tie the record format descriptors to the information records themselves. These values are arbitrary two byte values in the range 256 to 65535. If there is any possibility of running two different versions of your software on the same machine and they use different record format descriptors, then it is advisable to have distinct values for different record format descriptors.</p>
+
+<h4>Data</h4>
+
+<p>The first record in the data portion of the datagram is the receiver information record. This has the following header:</p>
+<pre>99 92 ll ll</pre>
+
+<p>The data that follows is encoded as three (or four — the number depends on the number of fields in the record format descriptor) fields of byte length code followed by UTF-8 (use ASCII if you don't know what UTF-8 is) data. The length code is the number of bytes of data and does not include the length code itself. Each field is limited to a length code of no more than 254 bytes. Finally, the record is null padded to a multiple of 4 bytes.</p>
+
+<p>For example, to encode N1DQ, FN42hn, Homebrew v5.6, the datagram fragment would look like:</p>
+<pre>99 92 00 20 04 4E 31 44 51 06 46 4E 34 32 68 6E 0D 48 6F 6D 65 62 72 65 77 20 76 35 2E 36 00 00</pre>
+
+<p>The decodingSoftware values are currently shown in the statistics page, so including version numbers (and any other pertinent information) may prove useful. The antennaInformation is shown on the map display when you hover over a receiver.</p>
+
+<p>After this (finally!) come the sender information records. This block has the following header:</p>
+<pre>99 93 ll ll</pre>
+
+<p>The data that follows is encoded as a sequence of records. Each of which contains the number of fields from the record format descriptor that you chose above. The callsign is encoded as a string using the byte length code format as described above. The frequency is a four byte integer (in network order). The iMD and sNR are single bytes (i.e. -128 to +127) and are only present if you chose that record format descriptor. The flowStartSeconds is a four byte integer (in network order) that records the time (the value of time(0)) that the callsign was recognized.</p>
+
+<p>There is no padding between the records, but there is padding (with null bytes) to a multiple of four at the end.</p>
+
+<p>For example, to encode (using the first record format descriptor) the following two reception records: N1DQ, 14070567, PSK, 1, 1200960084 (some time about 2008-01-22 00:00Z) and KB1MBX, 14070987, PSK, 1, 1200960104 (some time about 2008-01-22 00:00Z), the datagram fragment would look like:</p>
+<pre>99 93 00 2C 04 4E 31 44 51 00 D6 B3 27 03 50 53 4C 01 47 95 32 54 06 4B 42 31 4D 42 58 00 D6 B4 CB 03 50 53 4C 01 47 95 32 68 00 00</pre>
+
+<p>An example of a complete datagram (using the sample data above), sent at 1200960114, with sequence number 1. This is, in order, the header, the record format descriptor for the receiver information record, the record format descriptor for the sender information records, the block for the single receiver information record (with padding at the end), and, finally, the block containing two sender information records (with padding at the end).</p>
+
+<pre>00 0A 00 AC 47 95 32 72 00 00 00 01 00 00 00 00  
+00 03 00 24  99 92 00 03 00 01  80 02 FF FF 00 00 76 8F  80 04 FF FF 00 00 76 8F  80 08 FF FF 00 00 76 8F  00 00  
+00 02 00 2C  99 93 00 05  80 01 FF FF 00 00 76 8F  80 05 00 04 00 00 76 8F  80 0A FF FF 00 00 76 8F  80 0B 00 01 00 00 76 8F  00 96 00 04 
+99 92 00 20  04 4E 31 44 51  06 46 4E 34 32 68 6E  0D 48 6F 6D 65 62 72 65 77 20 76 35 2E 36  00 00 
+99 93 00 2C  04 4E 31 44 51  00 D6 B3 27  03 50 53 4B  01  47 95 32 54
+             06 4B 42 31 4D 42 58  00 D6 B4 CB  03 50 53 4B  01  47 95 32 68
+             00 00</pre>
+
+<p>If this same data was to be sent later in the session (say with sequence number 4) after the record format descriptors had already been transmitted, then the datagram would look like:</p>
+
+<pre>00 0A 00 5C 47 95 32 72 00 00 00 04 00 00 00 00  
+99 92 00 20  04 4E 31 44 51  06 46 4E 34 32 68 6E  0D 48 6F 6D 65 62 72 65 77 20 76 35 2E 36  00 00 
+99 93 00 2C  04 4E 31 44 51  00 D6 B3 27  03 50 53 4C  01  47 95 32 54
+             06 4B 42 31 4D 42 58  00 D6 B4 CB  03 50 53 4C  01  47 95 32 68
+             00 00</pre>
+
+<h2>Field Notes</h2>
+
+<h3>informationSource</h3>
+
+<p>This field really must be set to the value 1 ('automatically extracted') in order for the record to be considered. If the value is 2, then this record is considered to be the result of a QSO and the record is marked specially and the map is marked accordingly.</p>
+
+<h3>senderLocator</h3>
+
+<p>The senderLocator is not normally known except sometimes in the case of a QSO where it is transmitted as part of the QSO. In this case, it is highly desirable to include it in the record. In particular, this helps locate certain stations which are not found in other online databases. It also helps locate /MM stations.</p>
+
+<h2>Data Storage</h2>
+
+<p>The datagrams are received and if the record format descriptors are not present, then the source ip/port combination is used to see if there is saved record format descriptor information. With the format descriptors (from either source), the data can be extracted. Clock skew is detected — if the time of transmission is more than one minute from the time of reception, it is assumed that the sender's clock is set incorrectly. In this case, the clock skew can be calculated and all times in the packet can be adjusted accordingly.</p>
+
+<p>The sender information records are combined with the receiver information record and inserted into a database to form a table of reception records.</p>
+
+<h2>Data Retrieval</h2>
+
+<p>Reception records can be retrieved from the database by performing an http GET/POST on the URL:</p>
+
+<pre>https://retrieve.pskreporter.info/query?senderCallsign=requestedcall</pre>
+
+<p>This will return the last 100 reception records for the requested callsign, but for no more than 6 hours in any event. The default set of fields will be returned (receiverCallsign, receiverLocator, senderCallsign, frequency, flowStartSeconds).</p>
+
+<p>The full list of query parameters is:</p>
+
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>senderCallsign</td>
+<td>Specifies the sending callsign of interest.</td>
+</tr>
+<tr>
+<td>receiverCallsign</td>
+<td>Specifies the receiving callsign of interest.</td>
+</tr>
+<tr>
+<td>callsign</td>
+<td>Specifies the callsign of interest. Specify only one of these three parameters.</td>
+</tr>
+<tr>
+<td>flowStartSeconds</td>
+<td>A negative number of seconds to indicate how much data to retrieve. This cannot be more than 24 hours.</td>
+</tr>
+<tr>
+<td>mode</td>
+<td>The mode of the signal that was detected.</td>
+</tr>
+<tr>
+<td>rptlimit</td>
+<td>Limit the number of records returned.</td>
+</tr>
+<tr>
+<td>rronly</td>
+<td>Only return the reception report records if non zero</td>
+</tr>
+<tr>
+<td>noactive</td>
+<td>Do not return the active monitors if non zero</td>
+</tr>
+<tr>
+<td>frange</td>
+<td>A lower and upper limit of frequency. E.g. 14000000-14100000</td>
+</tr>
+<tr>
+<td>nolocator</td>
+<td>If non zero, then include reception reports that do not include a locator.</td>
+</tr>
+<tr>
+<td>callback</td>
+<td>Causes the returned document to be javascript, and it will invoke the function named in the callback.</td>
+</tr>
+<tr>
+<td>statistics</td>
+<td>Includes some statistical information</td>
+</tr>
+<tr>
+<td>modify</td>
+<td>If this has the value 'grid' then the callsign are interpreted as grid squares</td>
+</tr>
+<tr>
+<td>lastseqno</td>
+<td>Limits search to records with a sequence number greater than or equal to this parameter. The last sequence number in the database is returned on each response.</td>
+</tr>
+</tbody>
+</table>
+
+<p>Example response:</p>
+
+<pre>&lt;receptionReports&gt;
+  &lt;receptionReport receiverCallsign="KB1MBX" receiverLocator="FN42hn" senderCallsign="N1DQ" frequency=14070987 flowStartSeconds=xxxxxxx /&gt;
+  &lt;receptionReport receiverCallsign="ZZ1ZZ" receiverLocator="GG99" senderCallsign="N1DQ" frequency=14070987 flowStartSeconds=xxxxxxx /&gt;
+&lt;/receptionReports&gt;</pre>
+
+<p>Users are encouraged to retrieve reception data no more often than once every five minutes. If the display of reception data is integrated into the PSK transmitting application, then the timing can be optimized — do a retrieval five minutes after each transmission of 'de callsign callsign' (provided that it is more than five minutes since the previous retrieval). The purpose of the five minute delay is to allow all the receivers to make their reports.</p>
+
+<div class="note">
+<p><strong>Note:</strong> Please note that I may require (in the future) that frequent users of the API enable compression on their connections, that they not request the same data frequently etc. I reserve right to block or rate limit anybody who imposes a significant load on my system. If you want to be notified, then please add an additional query parameter of 'appcontact=myemailaddress' so that I can contact you. This will also enable me to work with you to solve any problems.</p>
+</div>
+
+<h2>Hack to update your locator</h2>
+
+<p>It turns out that you can use this mechanism to update your locator. This could be useful if you are mobile and want to update your locator as you move. To do this, you just need to submit a record that contains your callsign and locator as a receiver, and do not include any transmitter records.</p>
+
+<p>Using examples from above, this packet (once you fill in the various ll, tt, ss, ii fields correctly as above) would set N1DQ's locator to 'FN42hn'.</p>
+
+<pre>00 0A ll ll tt tt tt tt ss ss ss ss ii ii ii ii
+00 03 00 24 99 9F 00 03 00 00 80 02 FF FF 00 00 76 8F 80 04 FF FF 00 00 76 8F 80 08 FF FF 00 00 76 8F 00 00
+99 9F ll ll 04 4E 31 44 51 06 46 4E 34 32 68 6E 0D 48 6F 6D 65 62 72 65 77 20 76 35 2E 36 00 00</pre>
+
+<h2>Data Display</h2>
+
+<p>The data can be displayed in any way that the end software developer desires. As part of this project, there will be a simple google map based application that displays the reception data for a given callsign in a browser window. There is a <a href="https://pskreporter.info/pskmap.html">map display</a>.</p>
+
+<h2>Miscellaneous</h2>
+
+<h3>Why five minutes?</h3>
+
+<p>I am concerned about the data rate if this takes off. There could be (say) 10,000 clients submitting data continuously, and at a 300 second interval, this comes to 30 packets per second. This will turn into a significant database load if there are any significant number of reports per datagram.</p>
+
+<p>Hopefully most of the clients will implement an adaptive use of the retrieval mechanism otherwise that will prove a huge load. You may think that 10,000 is a lot of clients, but that is not clear to me. This application gives a purpose to people to just leave their rigs turned on and tuned to one of the PSK frequencies and logging away. In fact, I'd like one of the PSK clients to be able to control the frequency by time of day!</p>
+
+<p>In fact there is now such a tool -- freqmode2hrd that interrogates a web page to get the best frequency for your grid square.</p>
+
+<h3>Why use IPFIX?</h3>
+
+<p>IPFIX is a protocol designed for logging data associated with network traffic. The packets are self describing, and this allows for future upgrades in the PSK reporting system without huge difficulties. Also, I prefer not to reinvent the wheel!</p>
+
+<h3>Notes</h3>
+
+<p>Callsigns are case insensitive.</p>
+
+<p>The callsign to be reported is the entire string that is repeated after the 'DE' this includes any prefixes and suffixes. It is important that all authors be consistent as it allows the transmitter of the CQ to query the database for their particular string.</p>
+
+<h2>Testing</h2>
+
+<p>For testing purposes, there is a listener on pskreporter.info on port 14739 which will analyze the received packet. The results of the analysis can be seen at <a href="https://pskreporter.info/psktest.html">packet analysis</a>. The last few received packets are displayed.</p>
+
+</body>
+</html>

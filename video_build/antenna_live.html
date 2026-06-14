@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天线分析 — BG1SB</title>
+    
+<meta name="theme-color" content="#0a0e14">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* ── Reset ── */
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+            background: #0f0f1a;
+            color: #eee;
+            min-height: 100vh;
+        }
+        
+        /* ── Nav Bar ── */
+        .hermes-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #1a1a2e;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            height: 52px;
+            gap: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+        }
+        .hermes-nav .brand {
+            color: #e94560;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            margin-right: 24px;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+        .hermes-nav .brand span {
+            color: #888;
+            font-weight: 400;
+            font-size: 0.75rem;
+            margin-left: 6px;
+        }
+        .hermes-nav .nav-links {
+            display: flex;
+            gap: 2px;
+            height: 100%;
+            align-items: stretch;
+        }
+        .hermes-nav .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #8899aa;
+            text-decoration: none;
+            padding: 0 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .hermes-nav .nav-links a:hover {
+            color: #ccd6e0;
+            background: rgba(255,255,255,0.03);
+            border-bottom-color: #444;
+        }
+        .hermes-nav .nav-links a.active {
+            color: #e94560;
+            border-bottom-color: #e94560;
+            background: rgba(233,69,96,0.06);
+        }
+        .hermes-nav .nav-links a .icon {
+            font-size: 1.1rem;
+        }
+        
+        /* ── Mobile hamburger ── */
+        .hermes-nav .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #8899aa;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+            margin-left: auto;
+        }
+        .hermes-nav .hamburger:hover { color: #e94560; }
+        
+        /* ── Mobile nav overlay ── */
+        .mobile-nav-overlay {
+            display: none;
+            position: fixed;
+            top: 52px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10,10,26,0.95);
+            z-index: 999;
+            flex-direction: column;
+            padding: 16px;
+            gap: 4px;
+        }
+        .mobile-nav-overlay.open { display: flex; }
+        .mobile-nav-overlay a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #8899aa;
+            text-decoration: none;
+            padding: 14px 16px;
+            font-size: 1.05rem;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+        .mobile-nav-overlay a:hover,
+        .mobile-nav-overlay a.active {
+            background: rgba(233,69,96,0.12);
+            color: #e94560;
+        }
+        .mobile-nav-overlay a .icon { font-size: 1.3rem; }
+        
+        @media (max-width: 768px) {
+            .hermes-nav .nav-links { display: none; }
+            .hermes-nav .hamburger { display: block; }
+        }
+        
+        /* ── Page content wrapper ── */
+        .page-content {
+            /* Each page controls its own layout */
+        }
+        
+        
+        
+.filters{position:sticky;top:52px;z-index:99;background:#0d1117e6;backdrop-filter:blur(12px);border-bottom:1px solid #1e2a38;padding:6px 8px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters .sep{width:1px;height:14px;background:#1e2a38;margin:0 2px;flex-shrink:0}
+.filters button{appearance:none;padding:5px 9px;background:#1a2332;color:#8b949e;border:1.5px solid #1e2a38;border-radius:5px;cursor:pointer;font-size:11px;white-space:nowrap;min-height:32px;touch-action:manipulation;user-select:none}
+.filters button:active{transform:scale(.95)}
+.filters button.on{background:#1f6feb;border-color:#388bfd;color:#fff}
+.filters input{appearance:none;padding:5px 8px;background:#1a2332;color:#c9d1d9;border:1.5px solid #1e2a38;border-radius:5px;font-size:11px;font-family:monospace;text-transform:uppercase;min-height:32px;width:75px}
+.filters input:focus{outline:none;border-color:#58a6ff}
+.main{padding:10px 10px 70px}.cards{display:flex;flex-direction:column;gap:10px}
+.card{background:#11161e;border:1px solid #1e2a38;border-radius:10px;padding:12px;overflow:hidden}
+.card h2{font-size:13px;margin-bottom:8px;color:#c9d1d9}
+.card h2 em{font-style:normal;font-weight:400;font-size:11px;color:#5c6a7a;margin-left:auto}
+.chart{position:relative}.chart300{height:280px}.chart340{height:320px}.chart400{height:380px}
+.insight{font-size:10px;color:#3fb950;margin-top:6px;padding:6px 8px;background:#3fb95006;border-left:2px solid #3fb95033;border-radius:0 4px 4px 0;line-height:1.45}
+.note{font-size:9px;color:#4a5568;margin-top:4px;line-height:1.4}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.stat{background:#11161e;border:1px solid #1e2a38;border-radius:8px;padding:10px 8px;text-align:center}
+.stat .lbl{font-size:9px;color:#5c6a7a;text-transform:uppercase;letter-spacing:.6px}
+.stat .val{font-size:18px;font-weight:700;color:#e6edf3;margin:2px 0}
+.stat .sub{font-size:9px;color:#5c6a7a}
+.botnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:#0d1117ee;backdrop-filter:blur(12px);border-top:1px solid #1e2a38;display:flex;padding:6px 0 env(safe-area-inset-bottom,6px)}
+.botnav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:#5c6a7a;text-decoration:none;font-size:9px;padding:4px 0}
+.botnav a.on{color:#58a6ff}
+#refresh{font-size:10px;color:#5c6a7a}
+@media(min-width:769px){
+    .main{max-width:1200px;margin:0 auto;padding:16px}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card.full{grid-column:1/-1}
+    .stats-row{grid-template-columns:repeat(6,1fr);gap:10px}
+    .chart300{height:300px}.chart340{height:340px}.chart400{height:400px}
+    .botnav{display:none}.main{padding-bottom:16px}
+}
+
+    </style>
+</head>
+<body>
+    <!-- ════════════════════════════════════════
+         NAVIGATION BAR
+         ════════════════════════════════════════ -->
+    <nav class="hermes-nav">
+        <a href="/" class="brand">⚡ PSK Reporter<span>BG1SB</span></a>
+        <div class="nav-links">
+            <a href="/" class="">
+                <span class="icon">🗺️</span> 地图分析
+            </a>
+            <a href="/all" class="">
+                <span class="icon">📈</span> 全量数据
+            </a>
+            <a href="/qso" class="">
+                <span class="icon">📋</span> 通联日志
+            </a>
+            <a href="/advanced" class="">
+                <span class="icon">🔬</span> 深度分析
+            </a>
+            <a href="/antenna" class="active">
+                <span class="icon">📡</span> 天线分析
+            </a>
+        </div>
+        <button class="hamburger" onclick="document.querySelector('.mobile-nav-overlay').classList.toggle('open')" aria-label="菜单">
+            ☰
+        </button>
+    </nav>
+    
+    <!-- Mobile nav -->
+    <div class="mobile-nav-overlay">
+        <a href="/" class="" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">🗺️</span> 地图分析
+        </a>
+        <a href="/all" class="" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📈</span> 全量数据
+        </a>
+        <a href="/qso" class="" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📋</span> 通联日志
+        </a>
+        <a href="/advanced" class="" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">🔬</span> 深度分析
+        </a>
+        <a href="/antenna" class="active" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📡</span> 天线分析
+        </a>
+    </div>
+    
+    <!-- ════════════════════════════════════════
+         PAGE CONTENT
+         ════════════════════════════════════════ -->
+    <div class="page-content">
+        
+
+<div class="filters">
+    <button onclick="setRole('tx')" id="btn-role-tx" class="on">📤 发射 TX</button>
+    <button onclick="setRole('rx')" id="btn-role-rx">📥 接收 RX</button>
+    <span class="sep"></span><button onclick="setBand('')" id="btn-band-all" class="on">全波段</button>
+    <button onclick="setBand('20m')" id="btn-band-20m">20m</button>
+    <button onclick="setBand('40m')" id="btn-band-40m">40m</button>
+    <button onclick="setBand('15m')" id="btn-band-15m">15m</button>
+    <button onclick="setBand('10m')" id="btn-band-10m">10m</button>
+    <span class="sep"></span><input type="text" id="callsign-input" value="BG1SB" maxlength="12" onkeyup="if(event.key==='Enter')setCallsign()">
+    <span id="callsign-label" style="display:none"></span>
+    <button onclick="setCallsign()">查询</button>
+    <span class="sep"></span><button onclick="setYear(2025)" id="btn-yr-2025" class="on">2025</button>
+    <button onclick="setYear(2026)" id="btn-yr-2026">2026</button>
+    <span class="sep"></span>
+    <span id="refresh" style="font-size:10px;color:#5c6a7a;white-space:nowrap;padding:4px 8px;flex-shrink:0">准备中</span>
+</div>
+
+<div class="main">
+<div id="diagnosis-banner" style="background:linear-gradient(135deg,#11161e,#1a1f2e);border:1px solid #1e2a38;border-radius:10px;padding:14px;margin-bottom:12px;line-height:1.6">
+    <div style="font-size:13px;font-weight:700;color:#58a6ff;margin-bottom:6px">🔍 天线缺陷诊断 — ΔSNR 同城相对增益分析</div>
+    <div id="diagnosis-summary" style="font-size:12px;color:#c9d1d9"></div>
+    <div id="diagnosis-actions" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px"></div>
+    <div style="font-size:10px;color:#4a5568;margin-top:6px">算法：同一方向同一波段，对比BG1SB与ON80网格邻居的平均SNR差异。ΔSNR = SNR(BG1SB) - SNR(邻居均值)。负值越大 = 天线在该方向该波段落后越多。</div>
+</div>
+
+<div class="stats-row">
+    <div class="stat"><div class="lbl">最佳仰角</div><div class="val" id="st-best-angle">-</div><div class="sub" id="st-best-angle-sub"></div></div>
+    <div class="stat"><div class="lbl">仰角中位数</div><div class="val" id="st-median">-</div><div class="sub" id="st-median-sub"></div></div>
+    <div class="stat"><div class="lbl">天线类型推断</div><div class="val" id="st-type">-</div></div>
+    <div class="stat"><div class="lbl">vs 邻居仰角差</div><div class="val" id="st-vs-peer">-</div><div class="sub" id="st-vs-peer-sub"></div></div>
+    <div class="stat"><div class="lbl">DX能力</div><div class="val" id="st-dx">-</div><div class="sub"><8000km 占比</div></div>
+    <div class="stat"><div class="lbl">NVIS能力</div><div class="val" id="st-nvis">-</div><div class="sub"><500km 占比</div></div>
+</div>
+
+<div class="cards">
+<div class="card full">
+    <h2>🎯 ΔSNR 弱点热力图 <em>每波段×每方向 — 红色=落后邻居</em></h2>
+    <div class="chart chart340"><canvas id="weakCanvas"></canvas></div>
+    <div class="insight" id="weak-insight"></div>
+</div>
+
+<div class="card full">
+    <h2>🧭 二维方向图热力图 <em>方位角 × 仰角 — 天线在电离层下的实测投影</em></h2>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
+        <div style="position:relative;flex:0 0 auto;margin:0 auto">
+            <canvas id="polarCanvas" style="touch-action:none"></canvas>
+        </div>
+        <div style="flex:1;min-width:160px">
+            <div id="polar-readout" style="font-size:11px;color:#c9d1d9;line-height:1.7;background:#0d1117;border:1px solid #1e2a38;border-radius:8px;padding:10px;min-height:80px"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:9px;color:#5c6a7a">
+                <span>低</span>
+                <div id="polar-legend" style="flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#0d1117,#1f6feb,#3fb950,#d29922,#f85149)"></div>
+                <span>高密度</span>
+            </div>
+        </div>
+    </div>
+    <div class="note">角向=方位角(0°=N 顺时针,实测大圆方位) · 径向=辐射仰角(外圈0°=DX低仰角,圆心60°=NVIS高仰角) · 颜色=报文密度 · 仰角为F2@300km球面模型反推的估计值</div>
+    <div class="insight" id="polar-insight"></div>
+</div>
+
+<div class="card full">
+    <h2>🧭➡ 主瓣方位漂移 <em>逐波段主辐射方位 — 定向 vs 全向判定</em></h2>
+    <div id="lobe-diag" style="font-size:12px;color:#c9d1d9;background:#0d1117;border:1px solid #1e2a38;border-radius:8px;padding:10px;margin-bottom:10px;line-height:1.5"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 auto;margin:0 auto"><canvas id="lobeCanvas" style="touch-action:none"></canvas></div>
+        <div style="flex:1;min-width:220px;overflow-x:auto">
+            <table id="lobe-table" style="width:100%;border-collapse:collapse;font-size:11px"></table>
+        </div>
+    </div>
+    <div class="note">罗盘箭头 = 各波段主瓣方位(实测大圆方位圆形平均) · 箭头长度/颜色 = 方向集中度 R(越长越聚焦=越定向) · 箭头扎成一束=定向天线固定指向 · 散开=全向或多天线</div>
+    <div class="insight" id="lobe-insight"></div>
+</div>
+
+<div class="card full">
+    <h2>📐 辐射仰角分布 <em id="elev-title">BG1SB 发射仰角 vs ON80邻居</em></h2>
+    <div class="chart chart340"><canvas id="elevCanvas"></canvas></div>
+    <div class="note">横轴=仰角(度) · 蓝柱=BG1SB · 橙虚线=邻居 · 仰角越低=天线打得越远 · NVIS(>30°) vs DX(<10°)</div>
+    <div class="insight" id="elev-insight"></div>
+</div>
+
+<div class="card full">
+    <h2>📊 各波段最佳辐射仰角 <em>BG1SB 发射</em></h2>
+    <div class="chart chart340"><canvas id="bandAngleCanvas"></canvas></div>
+    <div class="note">横线=仰角范围(P10~P90) · 圆点=中位数 · 色=平均SNR · 低仰角(<8°)=DX · 中仰角(8-20°)=中距 · 高仰角(>20°)=NVIS</div>
+    <div class="insight" id="band-insight"></div>
+</div>
+
+<div class="card">
+    <h2>⚡ 电离层跳距分析 <em>信号路径诊断</em></h2>
+    <div class="chart chart300"><canvas id="hopCanvas"></canvas></div>
+    <div class="insight" id="hop-insight"></div>
+    <div class="note">E层(100km)单跳<2000km · F2层(300km)单跳2000-4000km · 双跳4000-8000km · 双跳占比低→天线低仰角能量不足</div>
+</div>
+
+<div class="card">
+    <h2>🔇 方向性噪声底限 <em>RX 接收</em></h2>
+    <div class="chart chart300"><canvas id="noiseCanvas"></canvas></div>
+    <div class="insight" id="noise-insight"></div>
+    <div class="note">每10°方位角最低SNR · 某方向最低SNR偏高→该方向有本地噪声源 · 最安静方向=真实接收极限</div>
+</div>
+
+<div class="card">
+    <h2>🔧 TX 发射质量诊断 <em>SNR 稳定性</em></h2>
+    <div class="chart chart300"><canvas id="txQualityCanvas"></canvas></div>
+    <div class="insight" id="txq-insight"></div>
+    <div class="note">SNR标准差(越低越好) · 同一接收台SNR抖动量 · vs邻居对比 · 高抖动→天线/馈线/功放问题</div>
+</div>
+
+<div class="card">
+    <h2>🎯 仰角 vs SNR 散点</h2>
+    <div class="chart chart300"><canvas id="scatterCanvas"></canvas></div>
+    <div class="note">每点=一个仰角分箱 · SN高的仰角区域=天线效率峰值</div>
+</div>
+
+<div class="card">
+    <h2>🔄 天线类型特征匹配</h2>
+    <div class="chart chart300"><canvas id="typeCanvas"></canvas></div>
+    <div class="note">对比典型天线仰角特征: Dipole(多角度) / Vertical(低仰角) / Yagi(聚焦) / NVIS(高仰角)</div>
+</div>
+</div>
+</div>
+
+<div class="botnav">
+    <a href="/">🗺 地图</a><a href="/advanced">🔬 深度</a><a href="/antenna" class="on">📶 天线</a><a href="/all">📊 全量</a>
+</div>
+
+
+    </div>
+    
+    
+<script>
+let currentBand='',currentYear=2025,currentRole='tx',currentCall='BG1SB',charts={};
+function setBand(b){currentBand=b;activateBtn('btn-band-',b||'all');loadAll()}
+function setYear(y){currentYear=y;activateBtn('btn-yr-',y);loadAll()}
+function setRole(r){currentRole=r;activateBtn('btn-role-',r);loadAll()}
+function setCallsign(){const v=document.getElementById('callsign-input').value.trim().toUpperCase();if(v)currentCall=v;document.getElementById('callsign-input').value=currentCall;document.getElementById('callsign-label').textContent=currentCall;loadAll()}
+function activateBtn(pref,val){document.querySelectorAll(`[id^="${pref}"]`).forEach(b=>b.classList.remove('on'));const e=document.getElementById(pref+val);if(e)e.classList.add('on')}
+
+async function loadAll(){
+    document.getElementById('refresh').textContent='⏳';const t0=Date.now();
+    const eps=[['weak_spots',renderWeakSpots],['polar_pattern',renderPolarPattern],['lobe_drift',renderLobeDrift],['elevation',renderElevation],['band_angle',renderBandAngle],['hop_analysis',renderHopAnalysis],['noise_floor',renderNoiseFloor],['tx_quality',renderTxQuality]];
+    const results={};
+    await Promise.all(eps.map(async([ep,fn])=>{
+        try{const d=await api(ep);results[ep]=d;fn(d)}catch(e){console.error(ep,e);results[ep]=null}
+    }));
+    document.getElementById('refresh').textContent=`🟢 ${Date.now()-t0}ms`;
+}
+async function api(ep){
+    const b=currentBand?`&band=${currentBand}`:'',r=`&role=${currentRole}`,c=`&callsign=${currentCall}`;
+    return(await fetch(`/api/antenna/${ep}?year=${currentYear}${r}${c}${b}`)).json();
+}
+
+function renderWeakSpots(data){
+    if(!data||!data.all_results){return}
+    // Populate diagnosis banner
+    document.getElementById('diagnosis-summary').textContent=data.summary;
+    const actions=document.getElementById('diagnosis-actions');
+    actions.innerHTML=(data.top4_directions||[]).map((d,i)=>{
+        const colors=['#f85149','#f0883e','#d29922','#8b949e'];
+        return `<div style="flex:1;min-width:140px;background:${colors[i]}11;border:1px solid ${colors[i]}33;border-radius:8px;padding:10px">
+            <div style="font-size:11px;color:${colors[i]};font-weight:700">${['❶','❷','❸','❹'][i]} ${d.direction}</div>
+            <div style="font-size:18px;font-weight:700;color:#e6edf3;margin:4px 0">${d.avg_delta>0?'+':''}${d.avg_delta}dB</div>
+            <div style="font-size:10px;color:#8b949e">${d.bands.slice(0,3).join('/')} · ${d.worst_band}最差${d.worst_delta}dB</div>
+            <div style="font-size:10px;color:#b0b8c4;margin-top:4px;line-height:1.3">${d.action}</div>
+        </div>`;
+    }).join('');
+
+    // Weak spots heatmap chart
+    const all=data.all_results;
+    const bands=[...new Set(all.map(d=>d.band))].sort();
+    const sectors=[...new Set(all.map(d=>d.sector))].sort((a,b)=>a-b);
+    if(charts.weak)charts.weak.destroy();
+    const maxAbs=Math.max(...all.map(d=>Math.abs(d.delta)),5);
+    charts.weak=new Chart(document.getElementById('weakCanvas').getContext('2d'),{
+        type:'bar',
+        data:{
+            labels:all.map(d=>d.band+' '+d.direction),
+            datasets:[{
+                data:all.map(d=>d.delta),
+                backgroundColor:all.map(d=>{
+                    const t=Math.abs(d.delta)/maxAbs;
+                    return d.delta<0?`rgba(248,81,73,${0.3+0.7*t})`:`rgba(63,185,80,${0.3+0.7*t})`;
+                }),
+                borderRadius:2,borderSkipped:false
+            }]
+        },
+        options:{
+            indexAxis:'y',responsive:true,maintainAspectRatio:false,
+            scales:{
+                x:{title:{display:true,text:'ΔSNR (dB) ← 落后邻居 | 优于邻居 →',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y:{grid:{color:'#15202b'},ticks:{color:'#8b949e',font:{size:9}}}
+            },
+            plugins:{
+                legend:{display:false},
+                tooltip:{callbacks:{label:ctx=>{
+                    const d=all[ctx.dataIndex];
+                    return[`${d.band} ${d.direction}`,`BG1SB: ${d.my_snr}dB`,`邻居: ${d.peer_snr}dB`,`ΔSNR: ${d.delta>0?'+':''}${d.delta}dB`,`样本: ${d.my_count}/${d.peer_count}`];
+                }}}
+            }
+        }
+    });
+
+    const losses=all.filter(d=>d.delta<-3).length;
+    document.getElementById('weak-insight').innerHTML=
+        `🔍 ${all.length}个(波段×方向)对比 · <b style="color:#f85149">${losses}个落后>3dB</b> · `+
+        `红色柱=输给邻居 · 绿色柱=优于邻居 · 柱越长差距越大`;
+}
+
+function renderElevation(data){
+    if(!data||!data.elevation)return;
+    const elev=data.elevation;
+    document.getElementById('elev-title').textContent=`${data.callsign} ${currentRole==='tx'?'发射':'接收'}仰角 vs ${data.grid}邻居 (${data.ionosphere})`;
+
+    if(charts.elev)charts.elev.destroy();
+    const myCount=elev.map(d=>d.my_count),peerCount=elev.map(d=>d.peer_count);
+    const maxC=Math.max(...myCount,...peerCount,1);
+    charts.elev=new Chart(document.getElementById('elevCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:elev.map(d=>d.angle+'°'),
+            datasets:[
+                {label:data.callsign,data:myCount,backgroundColor:'rgba(88,166,255,0.6)',borderRadius:3,yAxisID:'y',order:2},
+                {label:`${data.grid}邻居`,data:peerCount,backgroundColor:'rgba(240,136,62,0.3)',borderRadius:3,yAxisID:'y',order:3},
+                {label:'BG1SB SNR',data:elev.map(d=>d.my_snr),borderColor:'#58a6ff',backgroundColor:'transparent',type:'line',tension:0.3,pointRadius:2,pointBackgroundColor:'#58a6ff',borderWidth:2,yAxisID:'y1',order:1,spanGaps:true},
+                {label:'邻居 SNR',data:elev.map(d=>d.peer_snr),borderColor:'#f0883e',borderDash:[4,2],type:'line',tension:0.3,pointRadius:0,borderWidth:1.5,yAxisID:'y1',order:1,spanGaps:true}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+            scales:{
+                y:{position:'left',title:{display:true,text:'报文数',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'},stacked:false},
+                y1:{position:'right',title:{display:true,text:'SNR (dB)',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{title:{display:true,text:'辐射仰角 (度) ← 低=远 DX | 高=近 NVIS →',color:'#5c6a7a'},grid:{color:'#15202b'},ticks:{color:'#8b949e',maxTicksLimit:15}}
+            },
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}
+        }
+    });
+
+    // Stats
+    const valid=elev.filter(d=>d.my_count>10);
+    if(valid.length){
+        const peak=valid.reduce((a,b)=>(b.my_count||0)>(a.my_count||0)?b:a);
+        const angles=[];valid.forEach(d=>{for(let i=0;i<d.my_count;i++)angles.push(d.angle)});
+        angles.sort((a,b)=>a-b);const median=angles[Math.floor(angles.length/2)];
+        document.getElementById('st-best-angle').textContent=peak.angle+'°';
+        document.getElementById('st-best-angle-sub').textContent=`${peak.my_count.toLocaleString()} 报文`;
+        document.getElementById('st-median').textContent=median+'°';
+        const myPeers=valid.filter(d=>d.peer_count>5);
+        const myAvg=valid.reduce((s,d)=>s+(d.my_snr||0),0)/valid.filter(d=>d.my_snr).length;
+        const peerAvg=myPeers.reduce((s,d)=>s+(d.peer_snr||0),0)/myPeers.filter(d=>d.peer_snr).length;
+        document.getElementById('st-vs-peer').textContent=(myAvg-peerAvg).toFixed(1)+'dB';
+        const dx=elev.filter(d=>d.angle<10).reduce((s,d)=>s+d.my_count,0)/elev.reduce((s,d)=>s+d.my_count,0)*100;
+        const nvis=elev.filter(d=>d.angle>25).reduce((s,d)=>s+d.my_count,0)/elev.reduce((s,d)=>s+d.my_count,0)*100;
+        document.getElementById('st-dx').textContent=dx.toFixed(0)+'%';
+        document.getElementById('st-nvis').textContent=nvis.toFixed(0)+'%';
+        // Type inference
+        const t=median<8?'低仰角DX型 (Vertical/Beam)':median<20?'中仰角通用型 (Dipole/Yagi)':'高仰角NVIS型';
+        document.getElementById('st-type').textContent=t;
+        document.getElementById('st-type').style.fontSize='13px';
+        document.getElementById('st-vs-peer-sub').textContent=`${(myAvg-peerAvg)>0?'优于':'落后'}邻居 ${Math.abs(myAvg-peerAvg).toFixed(1)}dB`;
+        document.getElementById('st-median-sub').textContent=median<10?'天线偏低仰角→适合DX':median>20?'天线偏高仰角→适合本地':'天线仰角适中';
+
+        document.getElementById('elev-insight').innerHTML=
+            `🔍 <b>峰值仰角 ${peak.angle}°</b> · 中位数 ${median}° · `+
+            `${median<10?'✅ 天线辐射仰角偏低, 适合DX远距离通联':median<20?'➖ 天线仰角中等, 兼顾中近距离':'⚠ 天线辐射仰角偏高, 以NVIS本地通联为主'} · `+
+            `DX(<10°): ${dx.toFixed(0)}% NVIS(>25°): ${nvis.toFixed(0)}%`;
+    }
+}
+
+function renderHopAnalysis(data){
+    if(!data||!data.hops)return;
+    const hops=data.hops;
+    if(charts.hop)charts.hop.destroy();
+    charts.hop=new Chart(document.getElementById('hopCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:hops.map(h=>h.label),
+            datasets:[
+                {label:'报文数',data:hops.map(h=>h.count),backgroundColor:['rgba(63,185,80,0.5)','rgba(88,166,255,0.5)','rgba(240,136,62,0.5)','rgba(240,136,62,0.8)','rgba(248,81,73,0.5)','rgba(248,81,73,0.8)'],borderRadius:3,yAxisID:'y'},
+                {label:'P10 SNR',data:hops.map(h=>h.p10_snr),borderColor:'#58a6ff',type:'line',tension:0.3,pointRadius:3,pointBackgroundColor:'#58a6ff',borderWidth:2,yAxisID:'y1'},
+                {label:'P90 SNR',data:hops.map(h=>h.p90_snr),borderColor:'#3fb950',borderDash:[3,2],type:'line',tension:0.3,pointRadius:2,pointBackgroundColor:'#3fb950',borderWidth:1.5,yAxisID:'y1'}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            scales:{
+                y:{position:'left',title:{display:true,text:'报文数',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y1:{position:'right',title:{display:true,text:'SNR (dB)',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e',font:{size:10}}}
+            },
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}
+        }
+    });
+    const total=hops.reduce((s,h)=>s+h.count,0),multi=hops.filter(h=>h.label.includes('双跳')||h.label.includes('多跳')).reduce((s,h)=>s+h.count,0);
+    document.getElementById('hop-insight').innerHTML=
+        `🔍 总样本 ${total.toLocaleString()} · <b>双跳/多跳占比 ${(multi/total*100).toFixed(0)}%</b> · `+
+        `${multi/total<0.1?'⚠ 双跳极少→天线低仰角(<10°)能量严重不足→DX远距受限':'✅ 多跳能力正常'}`;
+}
+
+function renderNoiseFloor(data){
+    if(!data||!data.noise_floor)return;
+    const nf=data.noise_floor.sort((a,b)=>a.azimuth-b.azimuth);
+    const d8=['N','NE','E','SE','S','SW','W','NW'];
+    if(charts.noise)charts.noise.destroy();
+    charts.noise=new Chart(document.getElementById('noiseCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:nf.map(d=>d.azimuth%90===0?d.azimuth+'°'+d8[Math.round(d.azimuth/45)%8]:''),
+            datasets:[
+                {label:'最低SNR (噪声底限)',data:nf.map(d=>d.min_snr),backgroundColor:nf.map(d=>d.noise_warning?'rgba(248,81,73,0.5)':'rgba(88,166,255,0.4)'),borderRadius:3,yAxisID:'y'},
+                {label:'平均SNR',data:nf.map(d=>d.avg_snr),borderColor:'#3fb950',type:'line',tension:0.3,pointRadius:0,borderWidth:1.5,yAxisID:'y1'}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            scales:{
+                y:{position:'left',title:{display:true,text:'最低 SNR (dB)',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'},min:-30,max:5},
+                y1:{position:'right',title:{display:true,text:'平均 SNR (dB)',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e',maxTicksLimit:12,maxRotation:0}}
+            },
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}
+        }
+    });
+    const warnings=data.noisy_directions||[];
+    document.getElementById('noise-insight').innerHTML=
+        `🔍 最安静方向能听到 <b>${data.best_hearing}dB</b> 极弱信号 · `+
+        (warnings.length?`⚠ <b style="color:#f85149">${warnings.join(', ')}</b> 噪声底限偏高→排查该方向噪声源`:'✅ 各方向噪声底限均匀, 接收环境良好');
+}
+
+function renderTxQuality(data){
+    if(!data||!data.quality)return;
+    const q=data.quality;
+    if(charts.txq)charts.txq.destroy();
+    charts.txq=new Chart(document.getElementById('txQualityCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:q.map(d=>d.band),
+            datasets:[
+                {label:'BG1SB SNR标准差',data:q.map(d=>d.my_std),backgroundColor:q.map(d=>d.my_std>d.peer_std*1.5?'rgba(248,81,73,0.6)':'rgba(88,166,255,0.5)'),borderRadius:3,yAxisID:'y'},
+                {label:'邻居SNR标准差',data:q.map(d=>d.peer_std),backgroundColor:'rgba(240,136,62,0.3)',borderRadius:3,yAxisID:'y'},
+                {label:'同RX抖动量',data:q.map(d=>d.rx_variance),borderColor:'#f0883e',type:'line',tension:0.3,pointRadius:3,pointBackgroundColor:'#f0883e',borderWidth:2,yAxisID:'y1'}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            scales:{
+                y:{position:'left',title:{display:true,text:'SNR 标准差 (dB)',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y1:{position:'right',title:{display:true,text:'同RX抖动量(dB)',color:'#f0883e'},grid:{drawOnChartArea:false},ticks:{color:'#f0883e'},min:0},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e'}}
+            },
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}
+        }
+    });
+    document.getElementById('txq-insight').innerHTML=`🔍 ${data.overall} · `+q.filter(d=>d.diagnosis.includes('异常')||d.diagnosis.includes('抖动')).map(d=>`<b>${d.band}:</b>${d.diagnosis}`).join(' · ');
+}
+
+function renderBandAngle(data){
+    if(!data||!data.bands)return;
+    if(charts.bandAngle)charts.bandAngle.destroy();
+    const bands=data.bands;
+    charts.bandAngle=new Chart(document.getElementById('bandAngleCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:bands.map(b=>b.band),datasets:[{
+            label:'仰角范围(P10-P90)',
+            data:bands.map(b=>[b.p10_angle,b.p90_angle]),
+            backgroundColor:bands.map(b=>{
+                const t=b.median_angle<8?'rgba(63,185,80,0.3)':b.median_angle<20?'rgba(88,166,255,0.3)':'rgba(240,136,62,0.3)';
+                return t;
+            }),
+            borderColor:bands.map(b=>{
+                return b.median_angle<8?'#3fb950':b.median_angle<20?'#58a6ff':'#f0883e';
+            }),
+            borderWidth:1,borderRadius:2,borderSkipped:false
+        }]},
+        options:{
+            indexAxis:'y',responsive:true,maintainAspectRatio:false,
+            scales:{
+                x:{title:{display:true,text:'仰角 (度) ← 低=DX | 高=NVIS →',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'},min:0,max:60},
+                y:{grid:{color:'#15202b'},ticks:{color:'#8b949e'}}
+            },
+            plugins:{
+                legend:{display:false},
+                tooltip:{callbacks:{label:ctx=>{
+                    const b=bands[ctx.dataIndex];
+                    return[`P10: ${b.p10_angle}°`,`中位数: ${b.median_angle}°`,`P90: ${b.p90_angle}°`,`SNR: ${b.avg_snr}dB`,`${b.count.toLocaleString()} spots`,`类型: ${b.type}`];
+                }}}
+            }
+        }
+    });
+    // Also create scatter: SNR vs angle per band
+    if(charts.scatter)charts.scatter.destroy();
+    charts.scatter=new Chart(document.getElementById('scatterCanvas').getContext('2d'),{
+        type:'scatter',
+        data:{datasets:bands.map(b=>({
+            label:b.band,
+            data:[{x:b.median_angle,y:b.avg_snr}],
+            backgroundColor:b.median_angle<8?'#3fb950':b.median_angle<20?'#58a6ff':'#f0883e',
+            pointRadius:Math.max(4,Math.sqrt(b.count/500)),
+            pointHoverRadius:10
+        }))},
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            scales:{
+                x:{title:{display:true,text:'仰角中位数 (度)',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y:{title:{display:true,text:'平均 SNR (dB)',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}}
+            },
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8,font:{size:10}}}}
+        }
+    });
+
+    // Type match
+    const dxBands=bands.filter(b=>b.median_angle<8),midBands=bands.filter(b=>b.median_angle>=8&&b.median_angle<20),nvisBands=bands.filter(b=>b.median_angle>=20);
+    document.getElementById('band-insight').innerHTML=
+        (dxBands.length?`🔍 <b>DX低仰角波段(${dxBands.length}):</b> ${dxBands.map(b=>b.band).join('/')} · `:'')+
+        (midBands.length?`中距波段(${midBands.length}): ${midBands.map(b=>b.band).join('/')} · `:'')+
+        (nvisBands.length?`NVIS高仰角(${nvisBands.length}): ${nvisBands.map(b=>b.band).join('/')}`:'');
+
+    // Type radar
+    if(charts.type)charts.type.destroy();
+    const dxPct=dxBands.reduce((s,b)=>s+b.count,0)/Math.max(bands.reduce((s,b)=>s+b.count,0),1)*100;
+    const midPct=midBands.reduce((s,b)=>s+b.count,0)/Math.max(bands.reduce((s,b)=>s+b.count,0),1)*100;
+    const nvisPct=nvisBands.reduce((s,b)=>s+b.count,0)/Math.max(bands.reduce((s,b)=>s+b.count,0),1)*100;
+    charts.type=new Chart(document.getElementById('typeCanvas').getContext('2d'),{
+        type:'radar',
+        data:{labels:['DX远距离\n(低仰角<8°)','中距离\n(中仰角8-20°)','NVIS本地\n(高仰角>20°)','高波段\n(10m/6m)','低波段\n(160m/80m)','信号强度\n(SNR)'],
+            datasets:[{
+                label:data.callsign,
+                data:[dxPct,midPct,nvisPct,
+                    bands.filter(b=>['10m','12m','6m','2m'].includes(b.band)).reduce((s,b)=>s+b.count,0)/Math.max(bands.reduce((s,b)=>s+b.count,0),1)*100,
+                    bands.filter(b=>['160m','80m','60m','40m'].includes(b.band)).reduce((s,b)=>s+b.count,0)/Math.max(bands.reduce((s,b)=>s+b.count,0),1)*100,
+                    Math.min(100,Math.max(0,50+bands[0]?.avg_snr*3||50))
+                ],
+                backgroundColor:'rgba(88,166,255,0.2)',borderColor:'#58a6ff',borderWidth:2,pointRadius:3
+            }]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            scales:{r:{min:0,max:100,grid:{color:'#15202b'},ticks:{display:false},pointLabels:{color:'#8b949e',font:{size:9}}}},
+            plugins:{legend:{display:false}}
+        }
+    });
+}
+
+function renderPolarPattern(data){
+    const cv=document.getElementById('polarCanvas');if(!cv)return;
+    const ro=document.getElementById('polar-readout'),ins=document.getElementById('polar-insight');
+    if(!data||!data.cells||!data.cells.length){
+        if(ro)ro.innerHTML='<span style="color:#5c6a7a">该波段/方向暂无足够数据</span>';
+        const ctx0=cv.getContext('2d');ctx0.clearRect(0,0,cv.width,cv.height);return;
+    }
+    const cells=data.cells,elMax=data.el_max||60,azBin=data.az_bin||5,elBin=data.el_bin||3;
+    // sizing — square, responsive to container
+    const wrap=cv.parentElement,size=Math.min(wrap.clientWidth||340,360),dpr=window.devicePixelRatio||1;
+    cv.width=size*dpr;cv.height=size*dpr;cv.style.width=size+'px';cv.style.height=size+'px';
+    const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,size,size);
+    const cx=size/2,cy=size/2,R=size/2-18;
+    // color scale (density) — log so a few dominant bins don't wash out the rest
+    const maxC=Math.max(...cells.map(c=>c.count),1);
+    const heat=t=>{ // t in 0..1 → dark→blue→green→amber→red
+        const stops=[[13,17,23],[31,111,235],[63,185,80],[210,153,34],[248,81,73]];
+        const x=Math.max(0,Math.min(1,t))*(stops.length-1),i=Math.floor(x),f=x-i;
+        const a=stops[i],b=stops[Math.min(i+1,stops.length-1)];
+        return `rgb(${a[0]+(b[0]-a[0])*f|0},${a[1]+(b[1]-a[1])*f|0},${a[2]+(b[2]-a[2])*f|0})`;
+    };
+    // radius mapping: elevation 0° → outer rim (R), elevation elMax → center (0)
+    const rOf=el=>R*(1-Math.min(el,elMax)/elMax);
+    const aOf=az=>(az-90)*Math.PI/180; // 0°=N at top, clockwise (canvas 0°=east, so shift -90)
+    // draw wedges
+    cells.forEach(c=>{
+        const r0=rOf(c.elevation+elBin),r1=rOf(c.elevation); // inner→outer (lower el = larger r)
+        const a0=aOf(c.azimuth),a1=aOf(c.azimuth+azBin);
+        ctx.beginPath();
+        ctx.arc(cx,cy,Math.max(r0,0),a0,a1);
+        ctx.arc(cx,cy,Math.max(r1,0),a1,a0,true);
+        ctx.closePath();
+        ctx.fillStyle=heat(Math.log1p(c.count)/Math.log1p(maxC));
+        ctx.fill();
+    });
+    // grid rings (elevation) + labels
+    ctx.strokeStyle='#1e2a38';ctx.fillStyle='#5c6a7a';ctx.font='9px monospace';ctx.lineWidth=1;
+    [0,15,30,45,60].forEach(el=>{
+        if(el>elMax)return;const rr=rOf(el);
+        ctx.beginPath();ctx.arc(cx,cy,rr,0,2*Math.PI);ctx.stroke();
+        ctx.fillText(el+'°',cx+2,cy-rr+9);
+    });
+    // compass spokes + labels
+    const dirs=[['N',0],['E',90],['S',180],['W',270]];
+    ctx.strokeStyle='#15202b';
+    for(let az=0;az<360;az+=30){
+        const a=aOf(az);
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.stroke();
+    }
+    ctx.fillStyle='#8b949e';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    dirs.forEach(([lbl,az])=>{const a=aOf(az),lr=R+10;ctx.fillText(lbl,cx+lr*Math.cos(a),cy+lr*Math.sin(a));});
+    ctx.textAlign='start';ctx.textBaseline='alphabetic';
+    // tap/hover readout
+    const compass=az=>['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(az/22.5)%16];
+    const pick=(mx,my)=>{
+        const dx=mx-cx,dy=my-cy,rr=Math.hypot(dx,dy);if(rr>R)return null;
+        const el=elMax*(1-rr/R);let az=(Math.atan2(dy,dx)*180/Math.PI+90+360)%360;
+        const az_b=Math.floor(az/azBin)*azBin,el_b=Math.min(Math.floor(el/elBin)*elBin,elMax);
+        return cells.find(c=>c.azimuth===az_b&&c.elevation===el_b);
+    };
+    const showCell=c=>{
+        if(!c){ro.innerHTML='<span style="color:#5c6a7a">点击/悬停热力图查看某方位+仰角的报文统计</span>';return;}
+        ro.innerHTML=`<b style="color:#58a6ff">${c.azimuth}°–${c.azimuth+azBin}° ${compass(c.azimuth)}</b> · 仰角 ${c.elevation}°–${c.elevation+elBin}°<br>`+
+            `报文 <b>${c.count.toLocaleString()}</b> · 唯一台 ${c.stations}<br>平均SNR ${c.avg_snr}dB · 峰值 ${c.max_snr}dB`;
+    };
+    const evtCell=e=>{const rect=cv.getBoundingClientRect();const p=e.touches?e.touches[0]:e;return pick(p.clientX-rect.left,p.clientY-rect.top);};
+    cv.onmousemove=e=>showCell(evtCell(e));
+    cv.ontouchstart=e=>{showCell(evtCell(e));};
+    cv.onmouseleave=()=>showCell(null);
+    // default readout = peak
+    const pk=data.peak;
+    if(pk){
+        ro.innerHTML=`<div style="color:#5c6a7a;margin-bottom:4px">主瓣峰值方向</div>`+
+            `<b style="color:#3fb950">${pk.azimuth}° ${compass(pk.azimuth)}</b> @ 仰角 <b>${pk.elevation}°</b><br>`+
+            `报文 <b>${pk.count.toLocaleString()}</b> · 平均SNR ${pk.avg_snr}dB`;
+    }
+    // insight
+    const sectors={};cells.forEach(c=>{const d=compass(c.azimuth);sectors[d]=(sectors[d]||0)+c.count;});
+    const topDir=Object.entries(sectors).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const lowEl=cells.filter(c=>c.elevation<10).reduce((s,c)=>s+c.count,0);
+    const pctLow=data.total?(lowEl/data.total*100).toFixed(0):0;
+    ins.innerHTML=`🔍 主辐射方向 <b>${topDir.map(d=>d[0]).join(' / ')}</b> · `+
+        `峰值 ${pk?pk.azimuth+'° @'+pk.elevation+'°':'-'} · `+
+        `低仰角(<10°,DX) 能量占比 <b>${pctLow}%</b> · 共 ${data.total.toLocaleString()} 报文`;
+}
+
+function renderLobeDrift(data){
+    const cv=document.getElementById('lobeCanvas');if(!cv)return;
+    const diag=document.getElementById('lobe-diag'),tbl=document.getElementById('lobe-table'),ins=document.getElementById('lobe-insight');
+    if(!data||!data.bands||!data.bands.length){
+        if(diag)diag.innerHTML='<span style="color:#5c6a7a">暂无足够数据</span>';
+        const c0=cv.getContext('2d');c0.clearRect(0,0,cv.width,cv.height);
+        if(tbl)tbl.innerHTML='';return;
+    }
+    const bands=data.bands;
+    // band → color (low freq warm → high freq cool, matches typical band charts)
+    const palette={'160m':'#8b5cf6','80m':'#a855f7','60m':'#ec4899','40m':'#f85149','30m':'#f0883e','20m':'#d29922','17m':'#3fb950','15m':'#10b981','12m':'#14b8a6','10m':'#58a6ff','6m':'#818cf8','4m':'#c084fc','2m':'#e879f9'};
+    const col=b=>palette[b]||'#8b949e';
+    // ---- compass with one arrow per band ----
+    const wrap=cv.parentElement,size=Math.min(wrap.clientWidth||300,320),dpr=window.devicePixelRatio||1;
+    cv.width=size*dpr;cv.height=size*dpr;cv.style.width=size+'px';cv.style.height=size+'px';
+    const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,size,size);
+    const cx=size/2,cy=size/2,R=size/2-22;
+    const aOf=az=>(az-90)*Math.PI/180; // 0°=N up, clockwise
+    // rings + concentration scale labels
+    ctx.strokeStyle='#1e2a38';ctx.fillStyle='#5c6a7a';ctx.font='9px monospace';ctx.lineWidth=1;
+    [0.25,0.5,0.75,1].forEach(rr=>{ctx.beginPath();ctx.arc(cx,cy,R*rr,0,2*Math.PI);ctx.stroke();});
+    // compass spokes + N/E/S/W
+    ctx.strokeStyle='#15202b';
+    for(let az=0;az<360;az+=30){const a=aOf(az);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.stroke();}
+    ctx.fillStyle='#8b949e';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    [['N',0],['E',90],['S',180],['W',270]].forEach(([l,az])=>{const a=aOf(az);ctx.fillText(l,cx+(R+12)*Math.cos(a),cy+(R+12)*Math.sin(a));});
+    // arrows: length = concentration R, direction = mean azimuth
+    bands.forEach(b=>{
+        const a=aOf(b.mean_azimuth),len=R*Math.max(0.08,b.concentration);
+        const ex=cx+len*Math.cos(a),ey=cy+len*Math.sin(a),c=col(b.band);
+        ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=2.5;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);ctx.stroke();
+        // arrowhead
+        const ah=7;ctx.beginPath();
+        ctx.moveTo(ex,ey);
+        ctx.lineTo(ex-ah*Math.cos(a-0.4),ey-ah*Math.sin(a-0.4));
+        ctx.lineTo(ex-ah*Math.cos(a+0.4),ey-ah*Math.sin(a+0.4));
+        ctx.closePath();ctx.fill();
+    });
+    ctx.textAlign='start';ctx.textBaseline='alphabetic';
+    // overall mean arrow (white, dashed) if consistent
+    // ---- diagnosis banner ----
+    const spread=data.azimuth_spread;
+    diag.innerHTML=`<b style="color:#58a6ff">判定：</b>${data.diagnosis}`+
+        (spread!=null?` <span style="color:#5c6a7a">· 跨波段方位离散 ±${spread}°</span>`:'');
+    // ---- table ----
+    const kindColor={'强定向':'#3fb950','弱定向':'#58a6ff','准全向':'#d29922','全向':'#f0883e'};
+    tbl.innerHTML=`<tr style="color:#5c6a7a;text-align:left;border-bottom:1px solid #1e2a38">
+        <th style="padding:4px 6px">波段</th><th style="padding:4px 6px">主瓣方位</th>
+        <th style="padding:4px 6px">集中度</th><th style="padding:4px 6px">类型</th>
+        <th style="padding:4px 6px;text-align:right">报文</th></tr>`+
+        bands.map(b=>`<tr style="border-bottom:1px solid #11161e">
+            <td style="padding:4px 6px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${col(b.band)};margin-right:5px"></span>${b.band}</td>
+            <td style="padding:4px 6px;font-family:monospace">${b.mean_azimuth}° <span style="color:#8b949e">${b.compass}</span></td>
+            <td style="padding:4px 6px"><div style="display:flex;align-items:center;gap:4px"><div style="flex:0 0 36px;height:5px;background:#1e2a38;border-radius:3px;overflow:hidden"><div style="width:${(b.concentration*100).toFixed(0)}%;height:100%;background:${kindColor[b.type]}"></div></div><span style="font-family:monospace;font-size:10px">${b.concentration.toFixed(2)}</span></div></td>
+            <td style="padding:4px 6px;color:${kindColor[b.type]}">${b.type}</td>
+            <td style="padding:4px 6px;text-align:right;font-family:monospace">${b.count.toLocaleString()}</td>
+        </tr>`).join('');
+    // ---- insight ----
+    const azs=bands.map(b=>b.mean_azimuth);
+    const avgConc=bands.reduce((s,b)=>s+b.concentration,0)/bands.length;
+    const directional=bands.filter(b=>b.concentration>=0.35).length;
+    ins.innerHTML=`🔍 ${bands.length}个波段 · 平均集中度 <b>${avgConc.toFixed(2)}</b> · `+
+        `<b>${directional}</b>个波段呈定向特征 · `+
+        (spread!=null&&spread<=20?`各波段主瓣扎成一束(±${spread}°)→ <b style="color:#3fb950">定向天线固定指向</b>`:
+         spread!=null?`主瓣随波段漂移 ±${spread}° → 多天线或方向图随频变化`:'');
+}
+
+document.addEventListener('DOMContentLoaded',loadAll);
+</script>
+
+</body>
+</html>

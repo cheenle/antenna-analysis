@@ -1,0 +1,704 @@
+{% extends "base.html" %}
+
+{% block title %}全量数据{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block styles %}
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    .stat-card {
+        background: #16213e;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: none;
+    }
+    .stat-card .value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #667eea;
+    }
+    .stat-card .label {
+        color: #888;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+    .card {
+        background: #16213e;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: none;
+    }
+    .card h2 {
+        font-size: 1.2em;
+        margin-bottom: 15px;
+        color: #e94560;
+        border-bottom: 2px solid #e94560;
+        padding-bottom: 10px;
+    }
+    .charts-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+    }
+    .chart-container {
+        height: 300px;
+    }
+    .table-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #333;
+    }
+    th {
+        background: #1a1a2e;
+        position: sticky;
+        top: 0;
+    }
+    tr:hover {
+        background: #2a2a4a;
+    }
+    .bar {
+        display: inline-block;
+        height: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 3px;
+        margin-right: 10px;
+    }
+    .time-filter {
+        margin-bottom: 20px;
+    }
+    .time-filter button {
+        padding: 8px 16px;
+        margin-right: 5px;
+        border: none;
+        background: #0f3460;
+        color: #eee;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .time-filter button.active {
+        background: #667eea;
+        color: white;
+    }
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #888;
+    }
+    .page-header {
+        text-align: center;
+        padding: 20px 20px 10px;
+    }
+    .page-header h1 {
+        font-size: 1.8em;
+        margin-bottom: 10px;
+        color: #eee;
+    }
+    .page-header p {
+        color: #888;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 id="page-title">📊 全量数据分析</h1>
+    <p>PSK Reporter 全球传播数据统计</p>
+</div>
+
+<div class="container">
+    <!-- 筛选控制 -->
+    <div class="filter-section" style="background: #1a1a2e; border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; box-shadow: none;">
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+            <!-- 时间筛选 -->
+            <div class="time-filter" style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                <span style="color: #888; margin-right: 5px;">⏱️ 时间:</span>
+                <button onclick="setHours(1)" id="btn-1h">1小时</button>
+                <button onclick="setHours(6)" id="btn-6h">6小时</button>
+                <button onclick="setHours(12)" id="btn-12h">12小时</button>
+                <button onclick="setHours(24)" id="btn-24h" class="active">24小时</button>
+                <button onclick="setHours(168)" id="btn-168h">7天</button>
+                <button onclick="setHours(720)" id="btn-720h">30天</button>
+                <button onclick="setHours(0)" id="btn-all">全量</button>
+            </div>
+            
+            <!-- 波段筛选 -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #888;">📻 波段:</span>
+                <select id="band-select" onchange="setBand(this.value)" style="padding: 8px 12px; border: 1px solid #555; border-radius: 5px; font-size: 14px; min-width: 100px;">
+                    <option value="">全部波段</option>
+                    <option value="160m">160m</option>
+                    <option value="80m">80m</option>
+                    <option value="60m">60m</option>
+                    <option value="40m">40m</option>
+                    <option value="30m">30m</option>
+                    <option value="20m">20m</option>
+                    <option value="17m">17m</option>
+                    <option value="15m">15m</option>
+                    <option value="12m">12m</option>
+                    <option value="10m">10m</option>
+                    <option value="6m">6m</option>
+                    <option value="2m">2m</option>
+                </select>
+            </div>
+            
+            <!-- 年份选择 -->
+            <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                <span style="color: #888; margin-right: 5px;">📅 年份:</span>
+                <button onclick="setYear(2025)" id="btn-2025">2025</button>
+                <button onclick="setYear(2026)" id="btn-2026" class="active">2026</button>
+            </div>
+            
+            <!-- 呼号搜索 -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #888;">📡 呼号:</span>
+                <input type="text" id="callsign-input" placeholder="输入呼号搜索..." 
+                       style="padding: 8px 12px; border: 1px solid #555; border-radius: 5px; font-size: 14px; width: 150px;"
+                       onkeyup="if(event.keyCode===13)searchCallsign()">
+                <button onclick="searchCallsign()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">搜索</button>
+                <button onclick="clearCallsign()" style="padding: 8px 16px; background: #0f3460; color: #eee; border: none; border-radius: 5px; cursor: pointer;">清除</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 统计卡片 -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="value" id="total-records">-</div>
+            <div class="label">总记录数</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="unique-senders">-</div>
+            <div class="label">唯一发送方</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="unique-receivers">-</div>
+            <div class="label">唯一接收方</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="unique-bands">-</div>
+            <div class="label">活跃波段</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="record-rate">-</div>
+            <div class="label">记录/分钟</div>
+        </div>
+    </div>
+    
+    <!-- 图表行 -->
+    <div class="charts-row">
+        <!-- 波段分布 -->
+        <div class="card">
+            <h2>📻 波段分布</h2>
+            <div class="chart-container">
+                <canvas id="bandChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- 大洲分布 -->
+        <div class="card">
+            <h2>🌍 大洲分布</h2>
+            <div class="chart-container">
+                <canvas id="continentChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 时间线 -->
+    <div class="card">
+        <h2>📈 时间线 (记录数/小时)</h2>
+        <div class="chart-container" style="height: 250px;">
+            <canvas id="timelineChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- 空间天气 -->
+    <div class="card">
+        <h2>☀️ 空间天气 (太阳黑子 + Kp地磁)</h2>
+        <div class="chart-container" style="height: 250px;">
+            <canvas id="spaceWeatherChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- 详细表格 -->
+    <div class="charts-row">
+        <!-- 波段详情 -->
+        <div class="card">
+            <h2>📻 波段统计</h2>
+            <div class="table-container">
+                <table id="band-table">
+                    <thead>
+                        <tr>
+                            <th>波段</th>
+                            <th>记录数</th>
+                            <th>发送方</th>
+                            <th>平均SNR</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 国家统计 -->
+        <div class="card">
+            <h2>🏆 活跃国家 TOP 20</h2>
+            <div class="table-container">
+                <table id="country-table">
+                    <thead>
+                        <tr>
+                            <th>国家</th>
+                            <th>记录数</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentHours = 24;
+    let currentBand = '';
+    let currentCallsign = '';
+    let currentYear = 2026;
+    let bandChart, continentChart, timelineChart;
+
+    // ═══════════════════════════════════════════════════
+    // 刷新频率控制（避免打爆 StarRocks）
+    // ═══════════════════════════════════════════════════
+    const REFRESH_INTERVAL_MS = 300000;   // 5 分钟自动刷新
+    const DEBOUNCE_MS = 2000;             // 用户操作去抖 2 秒
+    let refreshTimer = null;
+    let debounceTimer = null;
+    let lastLoadTime = 0;
+    let pageVisible = true;
+
+    // Page Visibility API: tab 不可见时暂停自动刷新
+    document.addEventListener('visibilitychange', () => {
+        pageVisible = !document.hidden;
+        if (pageVisible) {
+            // 回到页面时，如果距上次加载超过间隔才刷新
+            const elapsed = Date.now() - lastLoadTime;
+            if (elapsed >= REFRESH_INTERVAL_MS) {
+                loadAllData();
+            }
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+
+    function startAutoRefresh() {
+        stopAutoRefresh();
+        if (pageVisible) {
+            refreshTimer = setInterval(() => {
+                if (pageVisible && Date.now() - lastLoadTime >= REFRESH_INTERVAL_MS - 5000) {
+                    loadAllData();
+                }
+            }, REFRESH_INTERVAL_MS);
+        }
+    }
+
+    function stopAutoRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+    }
+
+    // 去抖包装：用户操作（切换时间/波段/年份）时避免连续点击触发多次查询
+    function debouncedLoad() {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            loadAllData();
+        }, DEBOUNCE_MS);
+    }
+
+    // 显示刷新状态
+    function updateRefreshIndicator(text, color) {
+        let el = document.getElementById('refresh-indicator');
+        if (!el) {
+            el = document.createElement('span');
+            el.id = 'refresh-indicator';
+            el.style.cssText = 'font-size:12px;margin-left:12px;opacity:0.8';
+            const titleEl = document.getElementById('page-title');
+            if (titleEl) titleEl.appendChild(el);
+        }
+        el.textContent = text;
+        el.style.color = color;
+    }
+
+    // 设置时间范围
+    function setHours(hours) {
+        currentHours = hours;
+        document.querySelectorAll('.time-filter button').forEach(btn => btn.classList.remove('active'));
+        if (hours === 0) {
+            document.getElementById('btn-all').classList.add('active');
+        } else {
+            document.getElementById('btn-' + hours + 'h').classList.add('active');
+        }
+        debouncedLoad();
+    }
+
+    // 设置波段过滤
+    function setBand(band) {
+        currentBand = band;
+        debouncedLoad();
+    }
+
+    // 设置年份
+    function setYear(year) {
+        currentYear = year;
+        document.querySelectorAll('[id^="btn-20"]').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btn-' + year).classList.add('active');
+        debouncedLoad();
+    }
+
+    // 搜索呼号
+    function searchCallsign() {
+        const input = document.getElementById('callsign-input');
+        currentCallsign = input.value.trim();
+        debouncedLoad();
+    }
+
+    // 清除呼号搜索
+    function clearCallsign() {
+        document.getElementById('callsign-input').value = '';
+        currentCallsign = '';
+        debouncedLoad();
+    }
+    
+    // 构建查询参数
+    function buildQueryParams() {
+        let params = `hours=${currentHours}&year=${currentYear}`;
+        if (currentBand) params += `&band=${currentBand}`;
+        if (currentCallsign) params += `&callsign=${encodeURIComponent(currentCallsign)}`;
+        return params;
+    }
+    
+    // 加载所有数据（带缓存检测）
+    async function loadAllData() {
+        const startTime = Date.now();
+        try {
+            await Promise.all([
+                loadStats(),
+                loadBandAnalysis(),
+                loadContinentAnalysis(),
+                loadTimeline(),
+                loadSpaceWeather()
+            ]);
+            lastLoadTime = Date.now();
+            const elapsed = lastLoadTime - startTime;
+            // 200ms 内完成几乎肯定是全缓存命中
+            const cacheIcon = elapsed < 200 ? '⚡' : '🟢';
+            updateRefreshIndicator(cacheIcon + ' ' + new Date().toLocaleTimeString(), '#4caf50');
+        } catch (e) {
+            updateRefreshIndicator('🔴 错误', '#f44336');
+            console.error('loadAllData error:', e);
+        }
+    }
+    
+    // 加载统计摘要
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/all/stats?' + buildQueryParams());
+            const data = await response.json();
+            
+            document.getElementById('total-records').textContent = formatNumber(data.total_records);
+            document.getElementById('unique-senders').textContent = formatNumber(data.unique_senders);
+            document.getElementById('unique-receivers').textContent = formatNumber(data.unique_receivers);
+            document.getElementById('unique-bands').textContent = data.by_band.length;
+            
+            // 计算记录率
+            const firstRecord = new Date(data.first_record);
+            const lastRecord = new Date(data.last_record);
+            const minutes = Math.max(1, (lastRecord - firstRecord) / 60000);
+            const rate = Math.round(data.total_records / minutes);
+            document.getElementById('record-rate').textContent = formatNumber(rate);
+            
+        } catch (error) {
+            console.error('加载统计数据失败:', error);
+        }
+    }
+    
+    // 加载波段分析
+    async function loadBandAnalysis() {
+        try {
+            const response = await fetch(`/api/all/band_analysis?${buildQueryParams()}`);
+            const data = await response.json();
+            
+            // 更新图表
+            if (bandChart) bandChart.destroy();
+            
+            const ctx = document.getElementById('bandChart').getContext('2d');
+            bandChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.bands.map(b => b.band),
+                    datasets: [{
+                        label: '记录数',
+                        data: data.bands.map(b => b.count),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+            
+            // 更新表格
+            const tbody = document.querySelector('#band-table tbody');
+            tbody.innerHTML = data.bands.map(b => `
+                <tr>
+                    <td><strong>${b.band}</strong></td>
+                    <td>${formatNumber(b.count)}</td>
+                    <td>${formatNumber(b.unique_senders || '-')}</td>
+                    <td>${b.avg_snr != null ? b.avg_snr : '-'}</td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            console.error('加载波段分析失败:', error);
+        }
+    }
+    
+    // 加载大洲分析
+    async function loadContinentAnalysis() {
+        try {
+            const response = await fetch(`/api/all/continent_analysis?${buildQueryParams()}`);
+            const data = await response.json();
+            
+            // 颜色映射
+            const colors = {
+                'Asia': '#FF6384',
+                'Europe': '#36A2EB',
+                'North America': '#FFCE56',
+                'South America': '#4BC0C0',
+                'Oceania': '#9966FF',
+                'Africa': '#FF9F40',
+                'Unknown': '#C9CBCF'
+            };
+            
+            // 更新图表
+            if (continentChart) continentChart.destroy();
+            
+            const ctx = document.getElementById('continentChart').getContext('2d');
+            continentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.continents.map(c => c.continent),
+                    datasets: [{
+                        data: data.continents.map(c => c.count),
+                        backgroundColor: data.continents.map(c => colors[c.continent] || '#999')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+            
+            // 计算总记录数
+            const total = data.top_countries.reduce((sum, c) => sum + c.count, 0);
+            
+            // 更新国家表格
+            const tbody = document.querySelector('#country-table tbody');
+            tbody.innerHTML = data.top_countries.map(c => `
+                <tr>
+                    <td>${c.country}</td>
+                    <td>${formatNumber(c.count)}</td>
+                    <td>
+                        <div class="bar" style="width: ${Math.min(100, c.count / total * 200)}px;"></div>
+                        ${(c.count / total * 100).toFixed(1)}%
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            console.error('加载大洲分析失败:', error);
+        }
+    }
+    
+    // 加载时间线
+    async function loadTimeline() {
+        try {
+            // 根据时间范围选择合适的粒度
+            let granularity = 'hour';
+            if (currentHours > 0 && currentHours <= 2) {
+                granularity = 'minute';
+            } else if (currentHours === 0 || currentHours >= 168) {
+                granularity = 'day';
+            }
+            
+            const response = await fetch(`/api/all/timeline?${buildQueryParams()}&granularity=${granularity}`);
+            const data = await response.json();
+            
+            if (timelineChart) timelineChart.destroy();
+            
+            // 根据时间范围格式化标签
+            let labels;
+            let chartTitle;
+            const timeline = data.timeline;
+            
+            if (granularity === 'minute') {
+                // 分钟粒度：显示 HH:MM
+                labels = timeline.map(t => t.time.split(' ')[1] || t.time);
+                chartTitle = '记录数/分钟';
+            } else if (granularity === 'day') {
+                // 天粒度：显示 MM-DD
+                labels = timeline.map(t => {
+                    const parts = t.time.split(' ');
+                    if (parts.length >= 1) {
+                        const datePart = parts[0]; // YYYY-MM-DD
+                        const dateParts = datePart.split('-');
+                        if (dateParts.length >= 3) {
+                            return `${dateParts[1]}-${dateParts[2]}`;
+                        }
+                    }
+                    return t.time;
+                });
+                chartTitle = '记录数/天';
+            } else {
+                // 小时粒度：显示 MM-DD HH:00
+                labels = timeline.map(t => {
+                    const parts = t.time.split(' ');
+                    if (parts.length >= 2) {
+                        const datePart = parts[0]; // YYYY-MM-DD
+                        const timePart = parts[1]; // HH:00
+                        const dateParts = datePart.split('-');
+                        if (dateParts.length >= 3) {
+                            return `${dateParts[1]}-${dateParts[2]} ${timePart}`;
+                        }
+                    }
+                    return t.time;
+                });
+                chartTitle = '记录数/小时';
+            }
+            
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartTitle,
+                        data: timeline.map(t => t.count),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { 
+                                maxTicksLimit: granularity === 'day' ? 30 : (granularity === 'minute' ? 12 : 24),
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 更新卡片标题
+            document.querySelector('#timelineChart').closest('.card').querySelector('h2').textContent = `📈 时间线 (${chartTitle})`;
+            
+        } catch (error) {
+            console.error('加载时间线失败:', error);
+        }
+    }
+    
+    // 加载空间天气数据
+    async function loadSpaceWeather() {
+        try {
+            const resp = await fetch('/api/space_weather?year=' + currentYear);
+            const data = await resp.json();
+            if (!data.data || data.data.length === 0) return;
+            
+            const ctx = document.getElementById('spaceWeatherChart').getContext('2d');
+            const dates = data.data.map(d => d.date);
+            const sunspots = data.data.map(d => d.sunspot);
+            const kp = data.data.map(d => d.kp * 20); // scale Kp for visibility
+            
+            if (window.swChart) window.swChart.destroy();
+            window.swChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        { label: 'Sunspot Number', data: sunspots, borderColor: '#ff6b35', yAxisID: 'y', tension: 0.1, pointRadius: 0 },
+                        { label: 'Kp (x20)', data: kp, borderColor: '#00d2ff', yAxisID: 'y1', tension: 0.1, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { title: { display: true, text: 'Sunspot Number' }, position: 'left' },
+                        y1: { title: { display: true, text: 'Kp x20' }, position: 'right', grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        } catch(e) { console.error('Space weather:', e); }
+    }
+    
+    // 格式化数字
+    function formatNumber(num) {
+        if (num == null) return '-';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    }
+    
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAllData();
+        startAutoRefresh();
+    });
+
+    // 自动刷新交由 startAutoRefresh() 管理（5 分钟间隔 + 可见性检测）
+</script>
+{% endblock %}

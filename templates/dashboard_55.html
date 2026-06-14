@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5.5 通联看板 - BG1SB</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a1628; color: #d0d8e0; min-height: 100vh; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.header { text-align: center; padding: 30px 0 20px; }
+.header h1 { font-size: 32px; background: linear-gradient(135deg, #4fc3f7, #ab47bc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+.header .sub { color: #607d8b; font-size: 14px; }
+.header .status { color: #4caf50; font-size: 12px; margin-top: 6px; }
+.header .status.loading { color: #ff9800; }
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
+.s-card { background: linear-gradient(135deg, #112240, #0d1b2a); border: 1px solid #1e3a5f; border-radius: 16px; padding: 24px 16px; text-align: center; }
+.s-card .val { font-size: 42px; font-weight: 800; }
+.s-card .lbl { font-size: 13px; color: #607d8b; margin-top: 4px; }
+.s-card.c-done .val { color: #4caf50; }
+.s-card.c-pend .val { color: #ff9800; }
+.s-card.c-total .val { color: #4fc3f7; }
+.s-card.c-pct .val { color: #ce93d8; }
+.prog { margin: 0 0 28px; }
+.prog-bar { background: #112240; border-radius: 12px; height: 28px; overflow: hidden; border: 1px solid #1e3a5f; }
+.prog-fill { height: 100%; border-radius: 12px; background: linear-gradient(90deg, #4caf50, #4fc3f7); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; transition: width 0.8s ease; }
+.prog-txt { text-align: center; margin-top: 8px; color: #607d8b; font-size: 13px; }
+.grid-wrap { overflow-x: auto; margin: 0 0 32px; }
+.g-table { border-collapse: separate; border-spacing: 3px; margin: 0 auto; width: 100%; max-width: 1300px; }
+.g-table th { padding: 12px 6px; font-size: 12px; color: #78909c; text-align: center; font-weight: 600; }
+.g-table th.rh { text-align: right; padding-right: 14px; min-width: 80px; color: #b0bec5; font-size: 14px; }
+.g-table td { padding: 0; text-align: center; vertical-align: middle; }
+.g-table td.rh { text-align: right; padding: 10px 14px; font-weight: 700; font-size: 15px; color: #b0bec5; background: #112240; border-radius: 8px 0 0 8px; white-space: nowrap; }
+.g-table td.rc { text-align: center; background: #112240; border-radius: 0 8px 8px 0; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.cell { padding: 8px 4px; min-height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; margin: 3px; font-size: 11px; transition: all 0.3s; cursor: default; position: relative; }
+.cell:hover { transform: scale(1.12); z-index: 20; }
+.cell.new-ok { animation: popIn 0.6s ease; }
+@keyframes popIn { 0% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.cell.ok { background: rgba(76,175,80,0.15); border: 1px solid rgba(76,175,80,0.4); color: #81c784; }
+.cell.no { background: rgba(255,152,0,0.08); border: 1px dashed rgba(255,152,0,0.3); color: #546e7a; }
+.cell .icon { font-size: 16px; line-height: 1; }
+.cell.ok .icon { color: #4caf50; }
+.cell.sep { background: none; border: none; padding: 4px; }
+.cell.sep .line { width: 2px; height: 100%; background: #1e3a5f; margin: 0 auto; border-radius: 1px; }
+.sec { margin: 32px 0 16px; }
+.sec h2 { font-size: 18px; color: #4fc3f7; padding-bottom: 10px; border-bottom: 1px solid #1e3a5f; }
+.awards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+.aw-card { background: #112240; border: 1px solid #1e3a5f; border-radius: 12px; padding: 20px; text-align: center; }
+.aw-card .icon { font-size: 36px; margin-bottom: 8px; }
+.aw-card .name { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+.aw-card .req { font-size: 12px; color: #607d8b; margin-bottom: 10px; }
+.aw-card .status { font-size: 14px; font-weight: 700; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+.aw-card .status.yes { background: rgba(76,175,80,0.15); color: #4caf50; }
+.aw-card .status.wait { background: rgba(255,152,0,0.1); color: #ff9800; }
+.missing { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+.m-tag { padding: 6px 14px; background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.25); border-radius: 8px; font-size: 13px; color: #ff9800; }
+.s-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.s-card2 { background: #112240; border: 1px solid #1e3a5f; border-radius: 12px; padding: 16px; }
+.s-card2 .name { font-weight: 700; font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+.s-card2 .name .cnt { font-size: 13px; }
+.s-card2 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.s-card2 .tag { padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+.s-card2 .tag.ok { background: rgba(76,175,80,0.15); color: #81c784; }
+.s-card2 .tag.no { background: rgba(255,152,0,0.08); color: #78909c; border: 1px dashed rgba(255,152,0,0.2); }
+.legend { display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; }
+.leg { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #78909c; }
+.leg .dot { width: 14px; height: 14px; border-radius: 4px; }
+.leg .dot.ok { background: rgba(76,175,80,0.3); border: 1px solid rgba(76,175,80,0.5); }
+.leg .dot.no { background: rgba(255,152,0,0.1); border: 1px dashed rgba(255,152,0,0.3); }
+.footer { text-align: center; padding: 20px; color: #37474f; font-size: 12px; }
+@media (max-width: 600px) {
+  .summary { grid-template-columns: repeat(2, 1fr); }
+  .awards { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>5.5 中国业余无线电节 通联看板</h1>
+    <div class="sub">BG1SB &times; BnCRA 纪念电台 &nbsp;|&nbsp; 实时数据 (30s 自动刷新)</div>
+    <div class="sub">活动: 2026-05-03 06:00 ~ 05-05 17:59 &nbsp;|&nbsp; 仅统计 2026 年通联</div>
+    <div class="status" id="syncStatus">JTDX 同步: 每 5 分钟</div>
+    <div class="status" id="dataStatus">数据加载中...</div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div class="prog"><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div><div class="prog-txt" id="progTxt"></div></div>
+
+  <div class="legend">
+    <div class="leg"><div class="dot ok"></div>已通联</div>
+    <div class="leg"><div class="dot no"></div>待通联</div>
+  </div>
+
+  <div class="grid-wrap"><table class="g-table" id="mainGrid"></table></div>
+
+  <div class="sec"><h2>还差这些 (<span id="missCount"></span>个)</h2></div>
+  <div class="missing" id="missing"></div>
+
+  <div class="sec"><h2>各电台详情</h2></div>
+  <div class="s-list" id="detail"></div>
+
+  <div class="footer">数据来自 StarRocks (ham.vlsc.net) &nbsp;|&nbsp; 最后刷新: <span id="genTime"></span></div>
+</div>
+
+<script>
+const BN = ['B0CRA','B1CRA','B2CRA','B3CRA','B4CRA','B5CRA','B6CRA','B7CRA','B8CRA','B9CRA'];
+const HF = {{ hf_json|safe }};
+const BANDS = {{ bands_json|safe }};
+const TOTAL_COMBOS = BN.length * HF.length + 2;
+
+let prevDone = new Set();
+
+function render(DATA) {
+  const done = new Set();
+  const dates = {};
+  for (const d of DATA) {
+    const key = d.callsign + '|' + d.band + '|' + d.mode;
+    done.add(key);
+    dates[key] = d.dates;
+  }
+
+  const comboList = [];
+  for (const bn of BN) for (const b of HF) comboList.push([bn, b, 'FT8', false]);
+  comboList.push(['ANY', '6m', 'FT8', true]);
+  comboList.push(['ANY', '2m', 'FT8', true]);
+
+  let doneCount = 0;
+  const statusMap = {};
+  for (const c of comboList) {
+    let isDone;
+    if (c[3]) {
+      isDone = BN.some(bn => done.has(bn + '|' + c[1] + '|' + c[2]));
+    } else {
+      isDone = done.has(c[0] + '|' + c[1] + '|' + c[2]);
+    }
+    statusMap[c[0] + '|' + c[1] + '|' + c[2]] = isDone;
+    if (isDone) doneCount++;
+  }
+  const pendCount = TOTAL_COMBOS - doneCount;
+  const pct = (doneCount / TOTAL_COMBOS * 100).toFixed(1);
+  const bnSet = new Set(DATA.map(d => d.callsign));
+
+  // Check for new combos
+  const newKeys = new Set();
+  for (const k of done) {
+    if (!prevDone.has(k)) newKeys.add(k);
+  }
+
+  document.getElementById('summary').innerHTML =
+    '<div class="s-card c-done"><div class="val">' + doneCount + '</div><div class="lbl">已通联</div></div>' +
+    '<div class="s-card c-pend"><div class="val">' + pendCount + '</div><div class="lbl">待通联</div></div>' +
+    '<div class="s-card c-total"><div class="val">' + TOTAL_COMBOS + '</div><div class="lbl">总组合</div></div>' +
+    '<div class="s-card c-pct"><div class="val">' + pct + '%</div><div class="lbl">完成率</div></div>';
+
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progFill').textContent = doneCount + ' / ' + TOTAL_COMBOS;
+  document.getElementById('progTxt').textContent = '已完成 ' + doneCount + ' 个组合, 还需 ' + pendCount + ' 个  |  涉及 ' + bnSet.size + '/10 个 BnCRA';
+
+  // Main grid
+  let html = '<tr><th class="rh"></th>';
+  for (const b of BANDS) html += '<th>' + b + '<br><span style="color:#4caf50;font-size:10px">FT8</span></th>';
+  html += '<th>完成</th></tr>';
+
+  for (const bn of BN) {
+    html += '<tr><td class="rh">' + bn + '</td>';
+    let dc = 0;
+    for (let i = 0; i < BANDS.length; i++) {
+      const b = BANDS[i];
+      const key = bn + '|' + b + '|FT8';
+      const isDone = done.has(key);
+      if (isDone && HF.includes(b)) dc++;
+      if (i === HF.length) html += '<td class="sep"><div class="line"></div></td>';
+      const d = dates[key] || '';
+      const tip = isDone ? (bn + ' / ' + b + ' / FT8\n' + d) : (bn + ' / ' + b + ' / FT8\n待通联');
+      const icon = isDone ? '✓' : '·';
+      const cls = isDone ? 'ok' : 'no';
+      const isNew = newKeys.has(key) ? ' new-ok' : '';
+      html += '<td><div class="cell ' + cls + isNew + '" title="' + tip.replace(/"/g, '&quot;') + '"><span class="icon">' + icon + '</span></div></td>';
+    }
+    const color = dc >= HF.length ? '#4caf50' : dc >= HF.length * 0.7 ? '#8bc34a' : dc >= HF.length * 0.4 ? '#ff9800' : '#f44336';
+    html += '<td class="rc" style="color:' + color + '">' + dc + '/' + HF.length + '</td></tr>';
+  }
+
+  // Shared row
+  html += '<tr><td class="rh" style="color:#4fc3f7">VHF/UHF</td>';
+  for (let i = 0; i < BANDS.length; i++) {
+    const b = BANDS[i];
+    if (i < HF.length) { html += '<td></td>'; continue; }
+    const anyDone = BN.some(bn => done.has(bn + '|' + b + '|FT8'));
+    const icon = anyDone ? '✓' : '·';
+    const cls = anyDone ? 'ok' : 'no';
+    html += '<td><div class="cell ' + cls + '" title="' + (anyDone ? '已通联' : '待通联') + '"><span class="icon">' + icon + '</span></div></td>';
+  }
+  html += '<td></td></tr>';
+
+  document.getElementById('mainGrid').innerHTML = html;
+
+  // Missing
+  let mHtml = '';
+  let mCount = 0;
+  for (const c of comboList) {
+    const key = c[0] + '|' + c[1] + '|' + c[2];
+    if (!statusMap[key]) {
+      mCount++;
+      if (c[3]) {
+        mHtml += '<div class="m-tag">任一 BnCRA / ' + c[1] + ' / ' + c[2] + '</div>';
+      } else {
+        mHtml += '<div class="m-tag">' + c[0] + ' / ' + c[1] + ' / ' + c[2] + '</div>';
+      }
+    }
+  }
+  document.getElementById('missing').innerHTML = mHtml;
+  document.getElementById('missCount').textContent = mCount;
+
+  // Detail
+  let dHtml = '';
+  for (const bn of BN) {
+    const bnData = DATA.filter(d => d.callsign === bn);
+    const bnBands = [...new Set(bnData.map(d => d.band))].sort(function(a, b) { return BANDS.indexOf(a) - BANDS.indexOf(b); });
+    const dc = bnBands.filter(function(b) { return HF.includes(b); }).length;
+    const color = dc >= HF.length ? '#4caf50' : dc >= HF.length * 0.7 ? '#8bc34a' : dc >= HF.length * 0.4 ? '#ff9800' : '#f44336';
+    dHtml += '<div class="s-card2"><div class="name"><span>' + bn + '</span><span class="cnt" style="color:' + color + '">' + dc + '/' + HF.length + ' HF</span></div><div class="tags">';
+    for (const b of BANDS) {
+      const key = bn + '|' + b + '|FT8';
+      const isDone = done.has(key);
+      const d = dates[key] || '';
+      if (isDone) {
+        dHtml += '<span class="tag ok">' + b + ' ✓ ' + d + '</span>';
+      } else {
+        dHtml += '<span class="tag no">' + b + ' ·</span>';
+      }
+    }
+    dHtml += '</div></div>';
+  }
+  document.getElementById('detail').innerHTML = dHtml;
+  document.getElementById('genTime').textContent = new Date().toLocaleString('zh-CN');
+
+  prevDone = done;
+}
+
+function fetchData() {
+  fetch('/api/data')
+    .then(r => r.json())
+    .then(data => {
+      render(data);
+      const el = document.getElementById('dataStatus');
+      el.textContent = '已更新: ' + new Date().toLocaleTimeString('zh-CN');
+      el.className = 'status';
+    })
+    .catch(err => {
+      const el = document.getElementById('dataStatus');
+      el.textContent = '数据加载失败: ' + err;
+      el.className = 'status loading';
+    });
+}
+
+// Initial load
+fetchData();
+// Auto refresh every 30 seconds
+setInterval(fetchData, 30000);
+</script>
+</body>
+</html>

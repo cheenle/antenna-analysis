@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PSK Reporter{% endblock %} — BG1SB</title>
+    {% block head_extra %}{% endblock %}
+    <style>
+        /* ── Reset ── */
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+            background: #0f0f1a;
+            color: #eee;
+            min-height: 100vh;
+        }
+        
+        /* ── Nav Bar ── */
+        .hermes-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #1a1a2e;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            height: 52px;
+            gap: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+        }
+        .hermes-nav .brand {
+            color: #e94560;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            margin-right: 24px;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+        .hermes-nav .brand span {
+            color: #888;
+            font-weight: 400;
+            font-size: 0.75rem;
+            margin-left: 6px;
+        }
+        .hermes-nav .nav-links {
+            display: flex;
+            gap: 2px;
+            height: 100%;
+            align-items: stretch;
+        }
+        .hermes-nav .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #8899aa;
+            text-decoration: none;
+            padding: 0 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .hermes-nav .nav-links a:hover {
+            color: #ccd6e0;
+            background: rgba(255,255,255,0.03);
+            border-bottom-color: #444;
+        }
+        .hermes-nav .nav-links a.active {
+            color: #e94560;
+            border-bottom-color: #e94560;
+            background: rgba(233,69,96,0.06);
+        }
+        .hermes-nav .nav-links a .icon {
+            font-size: 1.1rem;
+        }
+        
+        /* ── Mobile hamburger ── */
+        .hermes-nav .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: #8899aa;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+            margin-left: auto;
+        }
+        .hermes-nav .hamburger:hover { color: #e94560; }
+        
+        /* ── Mobile nav overlay ── */
+        .mobile-nav-overlay {
+            display: none;
+            position: fixed;
+            top: 52px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10,10,26,0.95);
+            z-index: 999;
+            flex-direction: column;
+            padding: 16px;
+            gap: 4px;
+        }
+        .mobile-nav-overlay.open { display: flex; }
+        .mobile-nav-overlay a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #8899aa;
+            text-decoration: none;
+            padding: 14px 16px;
+            font-size: 1.05rem;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+        .mobile-nav-overlay a:hover,
+        .mobile-nav-overlay a.active {
+            background: rgba(233,69,96,0.12);
+            color: #e94560;
+        }
+        .mobile-nav-overlay a .icon { font-size: 1.3rem; }
+        
+        @media (max-width: 768px) {
+            .hermes-nav .nav-links { display: none; }
+            .hermes-nav .hamburger { display: block; }
+        }
+        
+        /* ── Page content wrapper ── */
+        .page-content {
+            /* Each page controls its own layout */
+        }
+        
+        {% block base_styles %}{% endblock %}
+        {% block styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- ════════════════════════════════════════
+         NAVIGATION BAR
+         ════════════════════════════════════════ -->
+    <nav class="hermes-nav">
+        <a href="/" class="brand">⚡ PSK Reporter<span>BG1SB</span></a>
+        <div class="nav-links">
+            <a href="/" class="{% if active_page == 'index' %}active{% endif %}">
+                <span class="icon">🗺️</span> 地图分析
+            </a>
+            <a href="/all" class="{% if active_page == 'all' %}active{% endif %}">
+                <span class="icon">📈</span> 全量数据
+            </a>
+            <a href="/qso" class="{% if active_page == 'qso' %}active{% endif %}">
+                <span class="icon">📋</span> 通联日志
+            </a>
+            <a href="/advanced" class="{% if active_page == 'advanced' %}active{% endif %}">
+                <span class="icon">🔬</span> 深度分析
+            </a>
+            <a href="/antenna" class="{% if active_page == 'antenna' %}active{% endif %}">
+                <span class="icon">📡</span> 天线分析
+            </a>
+        </div>
+        <button class="hamburger" onclick="document.querySelector('.mobile-nav-overlay').classList.toggle('open')" aria-label="菜单">
+            ☰
+        </button>
+    </nav>
+    
+    <!-- Mobile nav -->
+    <div class="mobile-nav-overlay">
+        <a href="/" class="{% if active_page == 'index' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">🗺️</span> 地图分析
+        </a>
+        <a href="/all" class="{% if active_page == 'all' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📈</span> 全量数据
+        </a>
+        <a href="/qso" class="{% if active_page == 'qso' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📋</span> 通联日志
+        </a>
+        <a href="/advanced" class="{% if active_page == 'advanced' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">🔬</span> 深度分析
+        </a>
+        <a href="/antenna" class="{% if active_page == 'antenna' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📡</span> 天线分析
+        </a>
+    </div>
+    
+    <!-- ════════════════════════════════════════
+         PAGE CONTENT
+         ════════════════════════════════════════ -->
+    <div class="page-content">
+        {% block content %}{% endblock %}
+    </div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+    "callsign": "BG1SB",
+    "log_dir": "logs",
+    "days": 1,
+    "database": {
+        "type": "starrocks",
+        "host": "ham.vlsc.net",
+        "port": 9030,
+        "http_port": 8030,
+        "user": "root",
+        "password": "",
+        "name": "pskreporter"
+    },
+    "wsjtx_log_paths": [
+        "~/Library/Application Support/WSJT-X/wsjtx_log.adi",
+        "~/Library/Application Support/JTDX/wsjtx_log.adi"
+    ],
+    "appcontact": "cheenle@qq.com",
+    "min_query_interval": 300
+}

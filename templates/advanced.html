@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+{% block title %}深度分析{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block styles %}
+/* ═══════════════════════════════════════════
+   MOBILE-FIRST BASE STYLES
+   ═══════════════════════════════════════════ */
+
+/* ── Filter bar ── */
+.filters{position:sticky;top:52px;z-index:99;background:#0d1117e6;backdrop-filter:blur(12px);
+         -webkit-backdrop-filter:blur(12px);border-bottom:1px solid #1e2a38;
+         padding:8px 10px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;
+         overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters .grp{display:flex;gap:4px;align-items:center;flex-shrink:0}
+.filters .sep{width:1px;height:14px;background:#1e2a38;margin:0 2px;flex-shrink:0}
+.filters .lbl{font-size:9px;color:#5c6a7a;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.filters button{-webkit-appearance:none;appearance:none;padding:6px 10px;background:#1a2332;
+    color:#8b949e;border:1.5px solid #1e2a38;border-radius:6px;cursor:pointer;
+    font-size:11px;font-weight:500;white-space:nowrap;min-height:34px;min-width:36px;
+    transition:all .15s;touch-action:manipulation;user-select:none}
+.filters button:active{transform:scale(.95)}
+.filters button.on{background:#1f6feb;border-color:#388bfd;color:#fff;font-weight:600}
+.filters input{-webkit-appearance:none;appearance:none;padding:6px 8px;background:#1a2332;
+    color:#c9d1d9;border:1.5px solid #1e2a38;border-radius:6px;font-size:12px;
+    font-family:monospace;text-transform:uppercase;min-height:34px;width:85px}
+.filters input:focus{outline:none;border-color:#58a6ff}
+
+/* ── Main content ── */
+.main{padding:10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.stat{background:#11161e;border:1px solid #1e2a38;border-radius:8px;padding:10px 8px;text-align:center}
+.stat .lbl{font-size:9px;color:#5c6a7a;text-transform:uppercase;letter-spacing:.6px}
+.stat .val{font-size:18px;font-weight:700;color:#e6edf3;margin:2px 0}
+.stat .sub{font-size:9px;color:#5c6a7a;line-height:1.3}
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{background:#11161e;border:1px solid #1e2a38;border-radius:10px;padding:12px;overflow:hidden}
+.card h2{font-size:13px;font-weight:600;margin-bottom:8px;color:#c9d1d9;display:flex;align-items:center;gap:6px}
+.card h2 em{font-style:normal;font-weight:400;font-size:11px;color:#5c6a7a;margin-left:auto}
+.chart{position:relative}
+.chart300{height:260px}
+.chart340{height:300px}
+.chart380{height:340px}
+.insight{font-size:10px;color:#3fb950;margin-top:6px;padding:6px 8px;background:#3fb95006;
+         border-left:2px solid #3fb95033;border-radius:0 4px 4px 0;line-height:1.45}
+.note{font-size:9px;color:#4a5568;margin-top:4px;line-height:1.4}
+
+/* ── Radiation layout ── */
+.rad-layout{display:flex;flex-direction:column;align-items:center;gap:8px}
+.rad-compass{display:flex;align-items:center;gap:10px;width:100%;justify-content:center}
+.rad-compass canvas{width:90px;height:90px;flex-shrink:0}
+.rad-compass-text{font-size:11px;color:#8b949e;text-align:left;line-height:1.4}
+.rad-compass-text b{color:#58a6ff}
+.rad-bars{width:100%}
+
+/* ═══════════════════════════════════════════
+   DESKTOP: >768px
+   ═══════════════════════════════════════════ */
+@media(min-width:769px){
+    .filters{top:52px;padding:8px 14px;gap:8px}.filters button{font-size:12px;padding:5px 12px;min-height:30px}
+    .filters input{font-size:13px;min-height:30px;width:100px}
+    .main{max-width:1500px;margin:0 auto;padding:16px}
+    .stats{grid-template-columns:repeat(6,1fr);gap:10px}
+    .stat{padding:12px 14px;text-align:left}.stat .val{font-size:22px}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .card.full{grid-column:1/-1}
+    .rad-layout{flex-direction:row;align-items:stretch}
+    .rad-compass{width:150px;flex-shrink:0;flex-direction:column}
+    .rad-compass canvas{width:130px;height:130px}
+    .rad-compass-text{text-align:center}
+    .rad-bars{flex:1;min-width:0}
+    .chart300{height:300px}.chart340{height:340px}.chart380{height:440px}
+    .main{padding-bottom:16px}
+}
+@media(min-width:1200px){
+    .cards{grid-template-columns:1fr 1fr 1fr}
+    .card.full{grid-column:1/-1}
+}
+{% endblock %}
+{% block content %}
+<!-- ── Sticky filters ── -->
+<div class="filters">
+    <span class="lbl">视角</span><span class="grp">
+    <button onclick="setRole('tx')" id="btn-role-tx" class="on">📤 TX</button>
+    <button onclick="setRole('rx')" id="btn-role-rx">📥 RX</button></span>
+    <span class="sep"></span><span class="lbl">波段</span><span class="grp">
+    <button onclick="setBand('')" id="btn-band-all" class="on">全</button>
+    <button onclick="setBand('20m')" id="btn-band-20m">20m</button>
+    <button onclick="setBand('40m')" id="btn-band-40m">40m</button>
+    <button onclick="setBand('15m')" id="btn-band-15m">15m</button>
+    <button onclick="setBand('10m')" id="btn-band-10m">10m</button>
+    <button onclick="setBand('6m')" id="btn-band-6m">6m</button></span>
+    <span class="sep"></span><span class="lbl">呼号</span><span class="grp">
+    <input type="text" id="callsign-input" value="BG1SB" maxlength="12" onkeyup="if(event.key==='Enter')setCallsign()">
+    <span id="callsign-label" style="display:none"></span>
+    <button onclick="setCallsign()">查询</button></span>
+    <span class="sep"></span><span class="lbl">年</span><span class="grp">
+    <button onclick="setYear(2025)" id="btn-yr-2025">2025</button>
+    <button onclick="setYear(2026)" id="btn-yr-2026" class="on">2026</button></span>
+    <span class="sep"></span>
+    <span id="refresh" style="font-size:10px;color:#5c6a7a;white-space:nowrap;padding:4px 8px;flex-shrink:0">准备中</span>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+<div class="stats">
+    <div class="stat"><div class="lbl">总报文</div><div class="val" id="st-total">-</div></div>
+    <div class="stat"><div class="lbl">平均SNR</div><div class="val" id="st-snr">-</div><div class="sub" id="st-snr-sub"></div></div>
+    <div class="stat"><div class="lbl">主方向</div><div class="val" id="st-lobe">-</div><div class="sub" id="st-lobe-sub"></div></div>
+    <div class="stat"><div class="lbl">最佳波段</div><div class="val" id="st-best">-</div><div class="sub" id="st-best-sub"></div></div>
+    <div class="stat"><div class="lbl">最远距离</div><div class="val" id="st-dist">-</div><div class="sub" id="st-dist-sub"></div></div>
+    <div class="stat"><div class="lbl">通联台数</div><div class="val" id="st-countries">-</div></div>
+</div>
+
+<div class="cards">
+<div class="card full">
+    <h2>🎯 水平辐射图 <em id="polar-label">BG1SB 发射方向</em></h2>
+    <div class="rad-layout">
+        <div class="rad-compass">
+            <canvas id="compassCanvas" width="130" height="130"></canvas>
+            <div class="rad-compass-text" id="compass-text"></div>
+        </div>
+        <div class="rad-bars chart chart340"><canvas id="azBarCanvas"></canvas></div>
+    </div>
+    <div class="insight" id="polar-insight"></div>
+    <div class="note">罗盘=独立电台分布 · 柱高=SNR(越高传播越好) · 橙线=SNR趋势</div>
+</div>
+
+<div class="card full">
+    <h2>⚖️ 同网格电台效率对比 <em id="grid-label">ON80 邻居对比</em></h2>
+    <div class="chart chart300"><canvas id="gridCanvas"></canvas></div>
+    <div class="insight" id="grid-insight"></div>
+    <div class="note">对比 BG1SB 与同网格(ON80)内其他电台 · 相同接收方+相同时段 SNR 差异 · 正值=优于邻居 · 负值=落后邻居</div>
+</div>
+
+<div class="card full">
+    <h2>🔬 电台综合审计 <em id="audit-label">vs ON80 邻居</em></h2>
+    <div class="chart chart340"><canvas id="auditCanvas"></canvas></div>
+    <div class="insight" id="audit-insight"></div>
+    <div class="note">综合评估: 发射效率 · 接收灵敏度 · SNR稳定性 · 距离效率 · 方向均匀度 · 时段活跃度</div>
+</div>
+
+<div class="card full">
+    <h2>📏 通联距离 vs SNR <em id="dist-label">发射距离分布</em></h2>
+    <div class="chart chart340"><canvas id="distCanvas"></canvas></div>
+    <div class="insight" id="dist-insight"></div>
+</div>
+
+<div class="card full">
+    <h2>🔥 传播开通时刻表</h2>
+    <div class="chart chart380"><canvas id="heatmapCanvas"></canvas></div>
+    <div class="insight" id="heatmap-insight"></div>
+</div>
+
+<div class="card">
+    <h2>📊 波段效率</h2>
+    <div class="chart chart300"><canvas id="bandCanvas"></canvas></div>
+</div>
+
+<div class="card">
+    <h2>⏰ 24h SNR 变化</h2>
+    <div class="chart chart300"><canvas id="hourlyCanvas"></canvas></div>
+</div>
+
+<div class="card">
+    <h2>📈 SNR 分布直方图</h2>
+    <div class="chart chart300"><canvas id="snrHistCanvas"></canvas></div>
+</div>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let currentBand='',currentYear=2026,currentRole='tx',currentCall='BG1SB';
+let charts={};
+
+function setBand(b){currentBand=b;activateBtn('btn-band-',b||'all');loadAll()}
+function setYear(y){currentYear=y;activateBtn('btn-yr-',y);loadAll()}
+function setCallsign(){const v=document.getElementById('callsign-input').value.trim().toUpperCase();if(v)currentCall=v;document.getElementById('callsign-input').value=currentCall;document.getElementById('callsign-label').textContent=currentCall;loadAll()}
+function setRole(r){currentRole=r;activateBtn('btn-role-',r);document.getElementById('polar-label').textContent=currentCall+(r==='tx'?' 发射方向':' 接收方向');document.getElementById('dist-label').textContent=currentCall+(r==='tx'?' 发射距离分布':' 接收距离分布');loadAll()}
+function activateBtn(pref,val){document.querySelectorAll(`[id^="${pref}"]`).forEach(b=>b.classList.remove('on'));const e=document.getElementById(pref+val);if(e)e.classList.add('on')}
+
+async function loadAll(){
+    updateRef('⏳','#f0883e');const t0=Date.now();
+    const results={};
+    const eps=[['radiation',renderRadiation],['grid_radiation',renderGridRadiation],['distance',renderDistance],['heatmap',renderHeatmap],['band_snr',renderBands],['hourly_efficiency',renderHourly],['grid_compare',renderGridCompare],['station_audit',renderStationAudit],['stats',renderStats]];
+    await Promise.all(eps.map(async([ep,fn])=>{
+        try{const d=await api(ep);results[ep]=d;fn(d);}
+        catch(e){console.error(ep+' failed:',e);results[ep]=null;}
+    }));
+    // renderStats needs band data
+    try{renderStats(results.stats||{},results.band_snr||[],results.radiation||[],results.distance||[]);}
+    catch(e){console.error('stats failed:',e);}
+    const allOk=Object.values(results).every(r=>r!==null);
+    updateRef(allOk?`🟢 ${new Date().toLocaleTimeString()} · ${Date.now()-t0}ms`:'🟡 部分完成','#4caf50');
+}
+function updateRef(t,c){const e=document.getElementById('refresh');e.textContent=t;e.style.color=c}
+async function api(ep){const b=currentBand?`&band=${currentBand}`:'';const r=`&role=${currentRole}`;const c=`&callsign=${currentCall}`;return(await fetch(`/api/advanced/${ep}?year=${currentYear}${r}${c}${b}`)).json()}
+
+// ── 1. RADIATION: Compass rose + Azimuth bar chart ──
+function renderRadiation(data){
+    // Compass
+    const cc=document.getElementById('compassCanvas'),cctx=cc.getContext('2d');
+    const cx=70,cy=70,R=62;
+    cctx.clearRect(0,0,140,140);
+    const octants=Array(8).fill(0),octSnr=Array(8).fill(0),octN=Array(8).fill(0);
+    for(const d of data){const o=Math.round(d.azimuth/45)%8;octants[o]+=d.unique_stations||0;octSnr[o]+=d.avg_snr*d.count;octN[o]+=d.count}
+    const maxO=Math.max(...octants,1);
+    const dirs=['N','NE','E','SE','S','SW','W','NW'];
+    for(let i=0;i<8;i++){
+        const pct=octants[i]/maxO,sa=(90-i*45-22.5)*Math.PI/180,ea=(90-i*45+22.5)*Math.PI/180;
+        cctx.beginPath();cctx.moveTo(cx,cy);cctx.arc(cx,cy,R*0.25+R*0.75*pct,sa,ea);cctx.closePath();
+        const aS=octN[i]?octSnr[i]/octN[i]:-30,t=Math.max(0,Math.min(1,(aS+25)/30));
+        const rr=Math.round(t<0.5?255:255-(t-0.5)*2*200),gg=Math.round(t<0.5?t*2*200:200);
+        cctx.fillStyle=`rgba(${rr},${gg},${60},${0.2+0.8*pct})`;cctx.fill();cctx.strokeStyle='#1e2a38';cctx.lineWidth=1;cctx.stroke();
+        const la=(90-i*45)*Math.PI/180;cctx.fillStyle='#8b949e';cctx.font='bold 9px sans-serif';cctx.textAlign='center';cctx.textBaseline='middle';
+        cctx.fillText(dirs[i],cx+(R+10)*Math.cos(la),cy-(R+10)*Math.sin(la))
+    }
+    cctx.beginPath();cctx.arc(cx,cy,12,0,Math.PI*2);cctx.fillStyle='#11161e';cctx.fill();cctx.strokeStyle='#1e2a38';cctx.stroke();
+    const peakO=octants.indexOf(maxO);cctx.fillStyle='#58a6ff';cctx.font='bold 10px sans-serif';cctx.textAlign='center';
+    cctx.fillText(dirs[peakO],cx,cy+3);
+    document.getElementById('compass-text').innerHTML=`主方向<br><b style="color:#58a6ff;font-size:14px">${dirs[peakO]}</b><br>${(maxO/octants.reduce((a,b)=>a+b,0)*100).toFixed(0)}%`;
+
+    // Azimuth bars: SNR 为主, 双数据集对比 (报文数 vs SNR)
+    const full=[];for(let a=0;a<360;a+=5){const d=data.find(x=>x.azimuth===a);full.push(d||{azimuth:a,count:0,unique_stations:0,avg_snr:-35})}
+    const snrSmooth=[];for(let i=0;i<full.length;i++){let s=0;for(let j=Math.max(0,i-2);j<=Math.min(full.length-1,i+2);j++)s+=full[j].avg_snr;snrSmooth.push(s/5)}
+    const maxCount=Math.max(...full.map(d=>d.count),1);
+    const maxStations=Math.max(...full.map(d=>d.unique_stations),1);
+    if(charts.azBar)charts.azBar.destroy();
+
+    // 找出最佳 SNR 区域 (连续 > 阈值 的方位)
+    const snrThreshold=-5; // "好信号" 阈值
+    const goodZones=[];
+    let zoneStart=-1;
+    for(let i=0;i<=full.length;i++){
+        const d=full[i%full.length]; // wrap for continuity at 0/360
+        if(d&&d.count>=50&&d.avg_snr>snrThreshold){
+            if(zoneStart<0)zoneStart=i;
+        }else if(zoneStart>=0){
+            if(i-zoneStart>=2)goodZones.push({start:zoneStart*5,end:(i-1)*5,width:(i-zoneStart)*5});zoneStart=-1;
+        }
+    }
+    if(zoneStart>=0&&full.length-zoneStart>=2)goodZones.push({start:zoneStart*5,end:(full.length-1)*5,width:(full.length-zoneStart)*5});
+
+    charts.azBar=new Chart(document.getElementById('azBarCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:full.map((d,i)=>i%9===0?d.azimuth+'°':''),
+            datasets:[
+                {label:'报文密度',data:full.map(d=>d.count),backgroundColor:'rgba(88,166,255,0.12)',borderRadius:1,borderSkipped:false,order:3,yAxisID:'y1'},
+                {label:'独立电台',data:full.map(d=>d.unique_stations),backgroundColor:'rgba(88,166,255,0.3)',borderRadius:2,borderSkipped:false,order:2,yAxisID:'y1'},
+                {label:'平均 SNR',data:full.map(d=>d.avg_snr),
+                 backgroundColor:full.map(d=>{
+                     if(d.count<20)return'rgba(255,255,255,0.06)';
+                     const t=Math.max(0,Math.min(1,(d.avg_snr+25)/25));
+                     return`rgba(${Math.round(t<0.5?255:255-(t-0.5)*2*200)},${Math.round(t<0.5?t*2*200:200)},${60},${0.35+0.65*t})`;
+                 }),borderRadius:3,borderSkipped:false,order:1,yAxisID:'y'},
+                {label:'SNR 平滑趋势',data:snrSmooth,type:'line',borderColor:'#f0883e',borderWidth:3,pointRadius:0,tension:0.35,fill:false,order:0,yAxisID:'y'}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+            scales:{
+                y:{position:'left',title:{display:true,text:'SNR (dB) ← 越高越好',color:'#f0883e'},
+                   grid:{color:'#15202b'},ticks:{color:'#8b949e'},min:-30,max:5},
+                y1:{position:'right',title:{display:true,text:'电台/报文数',color:'#8b949e'},
+                    grid:{drawOnChartArea:false},ticks:{color:'#8b949e'},beginAtZero:true},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e',maxRotation:0,autoSkip:false,
+                    callback:(v,i)=>{const az=i*5;return az%45===0?az+'°':''}}}
+            },
+            plugins:{legend:{display:false},
+                tooltip:{callbacks:{label:ctx=>{
+                    const d=full[ctx.dataIndex];
+                    if(ctx.datasetIndex===2)return[`SNR: ${d.avg_snr}dB`,d.count<20?'⚠ 样本少 (<20)':`报文: ${d.count.toLocaleString()}`];
+                    if(ctx.datasetIndex===1)return`电台: ${d.unique_stations} 个`;
+                    if(ctx.datasetIndex===0)return`报文: ${d.count.toLocaleString()}`;
+                    return`SNR趋势: ${ctx.raw.toFixed(1)}dB`;
+                }}}}
+        }
+    });
+
+    // Insights
+    const confData=full.filter(d=>d.count>50);
+    const bestSNR=confData.reduce((a,b)=>b.avg_snr>a.avg_snr?b:a,full[0]||{azimuth:'?',avg_snr:-99,unique_stations:0});
+    const bestCombo=confData.filter(d=>d.unique_stations>10).reduce((a,b)=>(b.avg_snr+b.unique_stations/maxStations*5)>(a.avg_snr+a.unique_stations/maxStations*5)?b:a,full[0]||{azimuth:'?',avg_snr:-99,unique_stations:0});
+    const peakCount=full.reduce((a,b)=>b.count>a.count?b:a,full[0]);
+    const d8=['北','东北','东','东南','南','西南','西','西北'];
+    document.getElementById('polar-insight').innerHTML=
+        `🔍 <b>SNR最优: ${bestSNR.azimuth}° ${d8[Math.round(bestSNR.azimuth/45)%8]}</b> (${bestSNR.avg_snr}dB, ${bestSNR.unique_stations}台) · `+
+        `<b>综合最优: ${bestCombo.azimuth}° ${d8[Math.round(bestCombo.azimuth/45)%8]}</b> (SNR ${bestCombo.avg_snr}dB + ${bestCombo.unique_stations}台) · `+
+        `橙线=SNR趋势 · 浅柱=样本少`;
+}
+
+// ── 2. DISTANCE ──
+function renderDistance(data){
+    if(charts.dist)charts.dist.destroy();
+    charts.dist=new Chart(document.getElementById('distCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:data.map(d=>d.range_km+'km'),
+            datasets:[{label:'报文数',data:data.map(d=>d.count),backgroundColor:'rgba(88,166,255,0.55)',borderRadius:3,yAxisID:'y',order:2},
+                {label:'平均SNR',data:data.map(d=>d.avg_snr),borderColor:'#f0883e',type:'line',tension:0.35,pointRadius:2,pointBackgroundColor:'#f0883e',borderWidth:1.5,yAxisID:'y1',order:1},
+                {label:'最高SNR',data:data.map(d=>d.max_snr),borderColor:'#3fb950',borderDash:[3,2],type:'line',tension:0.3,pointRadius:0,borderWidth:1,yAxisID:'y1',order:1}]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+            scales:{y:{type:'logarithmic',position:'left',title:{display:true,text:'报文数',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e',maxTicksLimit:8}},
+                y1:{position:'right',title:{display:true,text:'SNR(dB)',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e',maxTicksLimit:18,maxRotation:45}}},
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}}});
+    const far=data.filter(d=>parseInt(d.range_km)>0).pop();
+    if(far)document.getElementById('st-dist').textContent=far.range_km+' km';
+    document.getElementById('st-dist-sub').textContent=far?`${far.count.toLocaleString()} 报文 · SNR ${far.avg_snr}dB`:'';
+    const peakDist=data.filter(d=>d.count>100).sort((a,b)=>b.count-a.count)[0];
+    document.getElementById('dist-insight').innerHTML=peakDist?`🔍 <b>峰值 ${peakDist.range_km}km</b> (${peakDist.count.toLocaleString()} 报文) · ${peakDist.range_km<2000?'距离偏近→天线仰角可能偏高':'距离适中→传播条件良好'}`:'';
+}
+
+// ── 3. HEATMAP ──
+function renderHeatmap(data){
+    const cvs=document.getElementById('heatmapCanvas'),ctx=cvs.getContext('2d');
+    const dpr=window.devicePixelRatio||1;
+    const rect=cvs.parentElement.getBoundingClientRect();
+    const W=rect.width,H=480;cvs.width=W*dpr;cvs.height=H*dpr;cvs.style.width=W+'px';cvs.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+    const months=4,mStart=1,hours=24;
+    const cellW=(W-80)/hours,cellH=(H-60)/months,ox=70,oy=35;
+    const lkp={};for(const d of data)lkp[`${d.month}:${d.hour}`]=d.count;
+    const maxC=Math.max(...data.map(d=>d.count),1);
+    for(let m=0;m<months;m++)for(let h=0;h<24;h++){
+        const v=lkp[`${m+mStart}:${h}`]||0,t=v/maxC;
+        const r=Math.round(20+235*Math.pow(t,0.4)),g=Math.round(25+190*Math.pow(t,0.5)),b=Math.round(50+140*Math.pow(t,0.3));
+        ctx.fillStyle=v?`rgb(${r},${g},${b})`:'#0a0e14';
+        ctx.fillRect(ox+h*cellW+1,oy+m*cellH+1,cellW-2,cellH-2)
+    }
+    ctx.fillStyle='#8b949e';ctx.font='11px sans-serif';ctx.textAlign='right';
+    for(let m=0;m<months;m++)ctx.fillText(`${m+mStart}月`,ox-8,oy+m*cellH+cellH/2+4);
+    ctx.textAlign='center';
+    for(let h=0;h<24;h+=2)ctx.fillText(`${h}:00`,ox+h*cellW+cellW/2,oy-10);
+    ctx.fillText('UTC 小时 →',W/2,oy-24);
+    for(let i=0;i<20;i++){const v=maxC*i/20,t=v/maxC;ctx.fillStyle=`rgb(${Math.round(20+235*Math.pow(t,0.4))},${Math.round(25+190*Math.pow(t,0.5))},${Math.round(50+140*Math.pow(t,0.3))})`;ctx.fillRect(ox+i*11,H-18,11,12)}
+    ctx.fillStyle='#8b949e';ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillText('0',ox-8,H-2);ctx.textAlign='right';ctx.fillText(Math.round(maxC).toLocaleString(),ox+220,H-2);
+    const pk=data.reduce((a,b)=>b.count>a.count?b:a,{month:0,hour:0,count:0});
+    document.getElementById('heatmap-insight').innerHTML=`🔍 <b>黄金窗口: ${pk.month}月 ${pk.hour}:00 UTC</b> · ${pk.count.toLocaleString()} 报文 · 傍晚时段传播最佳 · 凌晨2-6点最弱`;
+}
+
+// ── 4. BANDS ──
+function renderBands(data){
+    if(charts.band)charts.band.destroy();
+    const maxC=Math.max(...data.map(d=>d.spot_count),1);
+    charts.band=new Chart(document.getElementById('bandCanvas').getContext('2d'),{
+        type:'bar',
+        data:{labels:data.map(d=>d.band),
+            datasets:[{label:'报文',data:data.map(d=>d.spot_count),backgroundColor:data.map(d=>`rgba(88,166,255,${0.2+0.8*d.spot_count/maxC})`),borderRadius:3,yAxisID:'y'},
+                {label:'SNR',data:data.map(d=>d.avg_snr),borderColor:'#f0883e',backgroundColor:'rgba(240,136,62,0.08)',type:'line',tension:0.3,pointRadius:4,pointBackgroundColor:'#f0883e',borderWidth:2,yAxisID:'y1'}]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+            scales:{y:{type:'logarithmic',position:'left',title:{display:true,text:'报文数',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y1:{position:'right',title:{display:true,text:'SNR(dB)',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e'}}},plugins:{legend:{display:false}}}});
+    const best=data[0];if(best){document.getElementById('st-best').textContent=best.band;document.getElementById('st-best-sub').textContent=`${best.spot_count.toLocaleString()} 报文 · SNR ${best.avg_snr}dB`}
+}
+
+// ── 5. HOURLY SNR ──
+function renderHourly(data){
+    if(charts.hourly)charts.hourly.destroy();
+    charts.hourly=new Chart(document.getElementById('hourlyCanvas').getContext('2d'),{
+        type:'line',
+        data:{labels:data.map(d=>`${d.hour}:00`),
+            datasets:[{label:'SNR',data:data.map(d=>d.avg_snr),borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,0.06)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#58a6ff',borderWidth:2,yAxisID:'y'},
+                {label:'报文/天',data:data.map(d=>d.avg_spots),borderColor:'#f0883e',tension:0.4,pointRadius:1,borderWidth:1,borderDash:[4,2],yAxisID:'y1'}]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+            scales:{y:{position:'left',title:{display:true,text:'SNR(dB)',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y1:{position:'right',title:{display:true,text:'报文/天',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e',maxTicksLimit:12}}},
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}}});
+}
+
+// ── 1b. GRID RADIATION OVERLAY ──
+function renderGridRadiation(data){
+    if(!data||!data.radiation||!charts.azBar) return;
+    const rad=data.radiation.filter(d=>d.peer_snr!==null);
+    if(rad.length<10) return;
+    const full=[];
+    for(let a=0;a<360;a+=5){const d=rad.find(x=>x.azimuth===a);full.push(d||{azimuth:a,peer_snr:null})}
+    const peerSNR=full.map(d=>d.peer_snr);
+    const peerSmooth=[];for(let i=0;i<full.length;i++){let s=0,n=0;for(let j=Math.max(0,i-2);j<=Math.min(full.length-1,i+2);j++){if(full[j].peer_snr!==null){s+=full[j].peer_snr;n++}}peerSmooth.push(n?s/n:null)}
+
+    // Add peer dataset to existing chart
+    charts.azBar.data.datasets.push({
+        label:`${data.grid} 邻居SNR趋势`,
+        data:peerSmooth,
+        type:'line',borderColor:'rgba(240,136,62,0.6)',borderWidth:2,borderDash:[6,3],
+        pointRadius:0,tension:0.35,fill:false,order:0,yAxisID:'y'
+    });
+    charts.azBar.update();
+
+    // Update polar insight with comparison
+    const myAvg=full.reduce((s,d)=>s+(d.my_snr||0),0)/full.filter(d=>d.my_snr!==null).length;
+    const peerAvg=full.reduce((s,d)=>s+(d.peer_snr||0),0)/full.filter(d=>d.peer_snr!==null).length;
+    const diff=(myAvg-peerAvg).toFixed(1);
+    const el=document.getElementById('polar-insight');
+    el.innerHTML+=` · <b style="color:#f0883e">vs ${data.grid}邻居: ${diff>0?'+':''}${diff}dB</b> (虚线=邻居SNR趋势)`;
+}
+
+// ── 6. GRID COMPARE ──
+function renderGridCompare(data){
+    if(!data||!data.bands||!data.bands.length){document.getElementById('grid-insight').textContent='⚠ 无足够对比数据';return}
+    document.getElementById('grid-label').textContent=data.grid+' 邻居对比';
+    const bands=data.bands;
+    if(charts.grid)charts.grid.destroy();
+    charts.grid=new Chart(document.getElementById('gridCanvas').getContext('2d'),{
+        type:'bar',
+        data:{
+            labels:bands.map(b=>b.band),
+            datasets:[
+                {label:data.callsign,data:bands.map(b=>b.my_snr),backgroundColor:'rgba(88,166,255,0.7)',borderRadius:3,yAxisID:'y'},
+                {label:`${data.grid} 邻居均值`,data:bands.map(b=>b.peer_snr),backgroundColor:'rgba(240,136,62,0.5)',borderRadius:3,yAxisID:'y'},
+                {label:'SNR差值',data:bands.map(b=>b.diff),borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,0.1)',type:'line',
+                 tension:0.3,pointRadius:5,pointBackgroundColor:bands.map(b=>b.diff>0?'#3fb950':b.diff<-3?'#f85149':'#d29922'),
+                 borderWidth:2,yAxisID:'y1'}
+            ]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+            scales:{
+                y:{position:'left',title:{display:true,text:'SNR (dB)',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},
+                y1:{position:'right',title:{display:true,text:'SNR 差值 (dB)',color:'#8b949e'},grid:{drawOnChartArea:false},ticks:{color:'#8b949e'}},
+                x:{grid:{color:'#15202b'},ticks:{color:'#8b949e'}}
+            },
+            plugins:{
+                legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}},
+                tooltip:{callbacks:{
+                    afterLabel:ctx=>{
+                        const b=bands[ctx.dataIndex];
+                        return[`共用接收方: ${b.common_rx}`,`样本: ${b.spots.toLocaleString()}`,`判定: ${b.verdict}`];
+                    }
+                }}
+            }
+        }
+    });
+    // Insight
+    const good=bands.filter(b=>b.diff>0).length, bad=bands.filter(b=>b.diff<-3).length;
+    const avgDiff=bands.reduce((s,b)=>s+b.diff,0)/bands.length;
+    const worst=bands.reduce((a,b)=>b.diff<a.diff?b:a,bands[0]);
+    document.getElementById('grid-insight').innerHTML=
+        `🔍 <b>${data.callsign} vs ${data.peer_count}个${data.grid}邻居</b> · `+
+        `${good}个波段优于邻居, ${bad}个波段明显落后 · `+
+        `平均SNR差 ${avgDiff>0?'+':''}${avgDiff.toFixed(1)}dB · `+
+        `${avgDiff<-3?'⚠ 天线/馈线可能存在损耗问题':'✅ 天线效率与邻居持平或更优'}`+
+        (worst.diff<-5?` · <b style="color:#f85149">${worst.band} 落后 ${Math.abs(worst.diff)}dB 需检查</b>`:'');
+}
+
+// ── 7. STATION AUDIT ──
+function renderStationAudit(data){
+    if(!data||!data.txrx){document.getElementById('audit-insight').textContent='⚠ 无审计数据';return}
+    document.getElementById('audit-label').textContent=`vs ${data.grid} 邻居 (${data.txrx.grid_tx_stations}台)`;
+    const a=data;
+
+    // Build radar chart: 6 dimensions normalized to 0-100
+    // 1. TX efficiency (my_tx_unique_rx vs grid avg)
+    const txScore=Math.min(100,Math.round(a.txrx.my_tx_unique_rx/Math.max(a.txrx.grid_tx_stations*500,1)*100));
+    // 2. RX sensitivity
+    const rxScore=Math.min(100,Math.round(a.txrx.my_rx_unique_tx/Math.max(a.txrx.grid_rx_stations*500,1)*100));
+    // 3. SNR stability (average across bands, higher std=worse)
+    const stabilityBands=a.stability.filter(b=>b.my_std>0);
+    const myAvgStd=stabilityBands.reduce((s,b)=>s+b.my_std,0)/Math.max(stabilityBands.length,1);
+    const peerAvgStd=stabilityBands.reduce((s,b)=>s+b.peer_std,0)/Math.max(stabilityBands.length,1);
+    const stabilityScore=Math.min(100,Math.round(peerAvgStd/Math.max(myAvgStd,0.1)*50));
+    // 4. Distance reach
+    const distEff=a.distance_efficiency;
+    const myDistAvg=distEff.reduce((s,d)=>s+d.my_snr,0)/Math.max(distEff.length,1);
+    const peerDistAvg=distEff.reduce((s,d)=>s+d.peer_snr,0)/Math.max(distEff.length,1);
+    const distScore=Math.round(50+(myDistAvg-peerDistAvg)*10);
+    // 5. Pattern omni-directionality
+    const patternScore=Math.min(100,Math.round(100-Math.min(a.pattern_quality.snr_variance,100)));
+    // 6. Activity coverage
+    const activityScore=Math.min(100,a.txrx.activity_pct);
+
+    if(charts.audit)charts.audit.destroy();
+    charts.audit=new Chart(document.getElementById('auditCanvas').getContext('2d'),{
+        type:'radar',
+        data:{labels:['发射效率','接收灵敏度','SNR稳定性','距离效率','全向均匀度','活跃度'],
+            datasets:[{
+                label:a.callsign,
+                data:[txScore,rxScore,stabilityScore,distScore,patternScore,activityScore],
+                backgroundColor:'rgba(88,166,255,0.2)',borderColor:'#58a6ff',borderWidth:2,pointRadius:4,pointBackgroundColor:'#58a6ff'
+            },{
+                label:`${a.grid} 邻居参考(50)`,
+                data:[50,50,50,50,50,50],
+                backgroundColor:'transparent',borderColor:'rgba(240,136,62,0.4)',borderWidth:1.5,borderDash:[4,3],pointRadius:2,pointBackgroundColor:'#f0883e'
+            }]
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            scales:{r:{min:0,max:100,grid:{color:'#15202b'},ticks:{display:false,stepSize:25},pointLabels:{color:'#8b949e',font:{size:11}}}},
+            plugins:{legend:{labels:{color:'#8b949e',usePointStyle:true,boxWidth:8}}}
+        }
+    });
+
+    // Build insight text
+    const txrx=a.txrx;
+    const issues=[],goods=[];
+    if(txrx.tx_rx_ratio<0.5)issues.push(`TX/RX比仅${txrx.tx_rx_ratio} → 能听到的台远多于能听到你的台`);
+    else goods.push(`TX/RX比${txrx.tx_rx_ratio} → 收发平衡良好`);
+    if(myAvgStd>peerAvgStd*1.2)issues.push(`SNR波动偏高(均值${myAvgStd.toFixed(1)} vs ${peerAvgStd.toFixed(1)}dB) → 检查天线连接/馈线`);
+    else goods.push(`SNR稳定性良好(${myAvgStd.toFixed(1)} vs ${peerAvgStd.toFixed(1)}dB)`);
+    if(myDistAvg<peerDistAvg-2)issues.push(`远距离SNR偏低 → 天线仰角可能偏高`);
+    else if(myDistAvg>peerDistAvg+1)goods.push(`远距离效率优于邻居(${myDistAvg.toFixed(1)} vs ${peerDistAvg.toFixed(1)}dB)`);
+    const unstableBands=a.stability.filter(b=>b.verdict==='波动大').map(b=>b.band);
+    if(unstableBands.length)issues.push(`${unstableBands.join('/')} SNR波动异常 → 可能RFI或天线谐振问题`);
+
+    document.getElementById('audit-insight').innerHTML=
+        (goods.length?`✅ ${goods.join(' · ')}<br>`:'')+
+        (issues.length?`⚠️ <b>${issues.join('<br>⚠️ ')}</b>`:'');
+}
+
+// ── 8. STATS + SNR HIST ──
+function renderStats(stats,bandData,_,radData,distData){
+    if(stats.total)document.getElementById('st-total').textContent=Number(stats.total).toLocaleString();
+    if(stats.countries)document.getElementById('st-countries').textContent=Number(stats.countries).toLocaleString();
+    const wSum=bandData.reduce((s,d)=>s+d.spot_count*d.avg_snr,0),wN=bandData.reduce((s,d)=>s+d.spot_count,0);
+    const avgS=wN?(wSum/wN).toFixed(1):'?';document.getElementById('st-snr').textContent=avgS+' dB';
+    const minS=Math.min(...bandData.map(d=>d.avg_snr)),maxS=Math.max(...bandData.map(d=>d.avg_snr));
+    document.getElementById('st-snr-sub').textContent=`范围 ${minS.toFixed(0)}~${maxS.toFixed(0)} dB`;
+    if(radData.length){const p=radData.reduce((a,b)=>b.count>a.count?b:a,radData[0]);document.getElementById('st-lobe').textContent=p.azimuth+'°';document.getElementById('st-lobe-sub').textContent=`${p.count.toLocaleString()} 报文`}
+    // SNR histogram
+    if(charts.snrHist)charts.snrHist.destroy();
+    const bins=[];for(let s=-35;s<=15;s+=2)bins.push({bin:s,count:0});
+    for(const b of bandData){const i=Math.floor((b.avg_snr+35)/2);if(i>=0&&i<bins.length)bins[i].count+=b.spot_count}
+    charts.snrHist=new Chart(document.getElementById('snrHistCanvas').getContext('2d'),{
+        type:'bar',data:{labels:bins.map(b=>b.bin+'dB'),datasets:[{data:bins.map(b=>b.count),backgroundColor:bins.map(b=>{const t=(b.bin+35)/50;return`rgba(${Math.round(t<0.5?88:88+(1-t)*100)},${Math.round(t<0.5?166:166+(t-0.5)*200)},${Math.round(t<0.5?255:60})`,0.7)`}),borderRadius:2}]},
+        options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'报文数',color:'#8b949e'},grid:{color:'#15202b'},ticks:{color:'#8b949e'}},x:{grid:{color:'#15202b'},ticks:{color:'#8b949e',maxTicksLimit:10,maxRotation:0}}},plugins:{legend:{display:false}}}});
+}
+
+document.addEventListener('DOMContentLoaded',loadAll);
+</script>
+{% endblock %}

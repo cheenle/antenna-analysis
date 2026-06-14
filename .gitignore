@@ -1,0 +1,60 @@
+# ===== 凭据 / 密钥（绝不入库）=====
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# ===== Node =====
+node_modules/
+package-lock.json
+
+# ===== 日志 / 运行时产物 =====
+logs/
+.iflow_logs/
+*.log
+nohup.out
+
+# ===== 大体积 / 媒体产物 =====
+*.mp4
+*.webm
+*.mhtml
+*.pdf
+*.exe
+
+# video_build 中间产物与成品（脚本可复现，不入库）
+video_build/raw_video/
+video_build/work/
+video_build/audio/
+video_build/clips/
+video_build/segments/
+video_build/node_modules/
+video_build/marks.json
+video_build/compact.json
+video_build/timing.json
+video_build/*.ass
+
+# ===== 生成的可视化 / 数据快照 =====
+visualizations/
+demo/
+market_data.json
+
+# ===== 大型静态数据 =====
+ALLCALL7.TXT
+
+# ===== 操作系统 / 编辑器 =====
+.DS_Store
+*.swp
+*~
+
+# ===== Claude 本地配置 =====
+.claude/settings.local.json

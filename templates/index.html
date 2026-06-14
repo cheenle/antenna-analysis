@@ -1,0 +1,857 @@
+{% extends "base.html" %}
+
+{# pass active_page variable to base for nav highlighting #}
+
+{% block title %}地图分析{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block base_styles %}
+    .page-content { height: 100vh; }
+{% endblock %}
+
+{% block styles %}
+    .container {
+        display: flex;
+        height: calc(100vh - 52px);
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+        width: 320px;
+        background: #1a1a2e;
+        padding: 20px;
+        overflow-y: auto;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+    }
+
+    .sidebar h1 {
+        color: #e94560;
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+
+    .sidebar .subtitle {
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+
+    /* 卡片 */
+    .card {
+        background: #16213e;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .card h3 {
+        color: #e94560;
+        font-size: 1rem;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* 时间选择 */
+    .time-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .time-picker label {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .time-picker input {
+        padding: 8px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        background: #1a1a2e;
+        color: #eee;
+        font-size: 0.9rem;
+    }
+
+    .quick-btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .quick-btn {
+        padding: 6px 12px;
+        background: #0f3460;
+        border: none;
+        border-radius: 5px;
+        color: #eee;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+
+    .quick-btn:hover {
+        background: #1a4a7a;
+    }
+
+    .quick-btn.active {
+        background: #e94560;
+    }
+
+    /* 类型选择 */
+    .type-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .type-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .type-btn.sender {
+        background: #0f3460;
+        color: #4CAF50;
+    }
+
+    .type-btn.receiver {
+        background: #0f3460;
+        color: #2196F3;
+    }
+
+    .type-btn.active.sender {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .type-btn.active.receiver {
+        background: #2196F3;
+        color: white;
+    }
+
+    /* 统计 */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .stat-item {
+        background: #1a1a2e;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-item .value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #e94560;
+    }
+
+    .stat-item .label {
+        font-size: 0.75rem;
+        color: #888;
+    }
+
+    /* 模式列表 */
+    .mode-list {
+        max-height: 100px;
+        overflow-y: auto;
+    }
+
+    .mode-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #333;
+    }
+
+    .mode-name {
+        color: #eee;
+    }
+
+    .mode-count {
+        color: #e94560;
+        font-weight: bold;
+    }
+
+    /* 国家列表 */
+    .country-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .country-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #333;
+        font-size: 0.85rem;
+    }
+
+    .country-rank {
+        color: #666;
+        margin-right: 5px;
+    }
+
+    /* 地图容器 */
+    .map-container {
+        flex: 1;
+        position: relative;
+    }
+
+    #map {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* 图例 */
+    .legend {
+        position: absolute;
+        bottom: 30px;
+        right: 10px;
+        background: rgba(44, 44, 52, 0.9);
+        padding: 10px 15px;
+        border-radius: 8px;
+        z-index: 1000;
+    }
+
+    .legend h4 {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        color: #e94560;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+        font-size: 0.8rem;
+    }
+
+    .legend-color {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+
+    .legend-color.sender { background: #4CAF50; }
+    .legend-color.receiver { background: #2196F3; }
+    .legend-color.my-location { background: #e94560; }
+
+    /* 加载状态 */
+    .loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(26, 26, 46, 0.9);
+        padding: 20px 40px;
+        border-radius: 10px;
+        z-index: 2000;
+        display: none;
+    }
+
+    .loading.show { display: block; }
+
+    /* 记录详情弹窗 */
+    .record-detail {
+        background: #2a2a4a;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 0.9rem;
+        min-width: 200px;
+    }
+
+    .record-detail p { margin: 6px 0; }
+    .record-detail .label { color: #bbb; }
+    .record-detail .value { color: #fff; font-weight: 500; }
+    .leaflet-popup-content-wrapper {
+        background: #2a2a4a;
+        color: #fff;
+        border-radius: 8px;
+    }
+    .leaflet-popup-tip {
+        background: #2a2a4a;
+    }
+
+    /* 查询按钮 */
+    .query-btn {
+        width: 100%;
+        padding: 12px;
+        background: #e94560;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 10px;
+    }
+
+    .query-btn:hover { background: #ff6b8a; }
+
+    /* 刷新按钮 */
+    .refresh-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 10px 15px;
+        background: #e94560;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        z-index: 1000;
+        font-size: 0.9rem;
+    }
+
+    .refresh-btn:hover { background: #ff6b8a; }
+
+    /* DXCC 进度条 */
+    .dxcc-bar {
+        background: #0f3460;
+        border-radius: 4px;
+        height: 6px;
+        margin-top: 5px;
+        overflow: hidden;
+    }
+    .dxcc-bar-inner {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+    .dxcc-bar-inner.validated { background: #4CAF50; }
+    .dxcc-bar-inner.unvalidated { background: #ff6b6b; }
+
+    /* 波段列表 */
+    .band-list {
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    .band-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #333;
+    }
+    .band-name {
+        width: 50px;
+        font-weight: bold;
+        color: #e94560;
+    }
+    .band-bar-container {
+        flex: 1;
+        margin: 0 10px;
+    }
+    .band-bar {
+        height: 8px;
+        background: #0f3460;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .band-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4CAF50, #8BC34A);
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+    .band-count {
+        width: 60px;
+        text-align: right;
+        font-size: 0.85rem;
+        color: #aaa;
+    }
+
+    /* 最佳时间 */
+    .best-time-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        font-size: 0.8rem;
+    }
+    .best-time-band {
+        color: #e94560;
+        font-weight: bold;
+    }
+    .best-time-hour {
+        color: #4CAF50;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="sidebar">
+            <h1>📡 PSK Reporter</h1>
+            <p class="subtitle" id="callsign_title">加载中...</p>
+            
+            <div class="card">
+                <h3>📅 时间范围</h3>
+                <div class="time-picker">
+                    <div>
+                        <label>开始时间</label>
+                        <input type="datetime-local" id="start_time">
+                    </div>
+                    <div>
+                        <label>结束时间</label>
+                        <input type="datetime-local" id="end_time">
+                    </div>
+                </div>
+                <div class="quick-btns">
+                    <button class="quick-btn" data-hours="1">1小时</button>
+                    <button class="quick-btn" data-hours="6">6小时</button>
+                    <button class="quick-btn active" data-hours="24">24小时</button>
+                    <button class="quick-btn" data-hours="168">7天</button>
+                    <button class="quick-btn" data-hours="720">30天</button>
+                    <button class="quick-btn" data-hours="0">全部</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>📊 显示类型</h3>
+                <div class="type-selector">
+                    <button class="type-btn sender active" data-type="sender">发射记录</button>
+                    <button class="type-btn receiver active" data-type="receiver">接收记录</button>
+                </div>
+                <button class="query-btn" id="queryBtn">🔍 查询数据</button>
+            </div>
+            
+            <div class="card">
+                <h3>📈 统计信息</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="value" id="sender_count">0</div>
+                        <div class="label">发射记录</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="receiver_count">0</div>
+                        <div class="label">接收记录</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="total_countries">0</div>
+                        <div class="label">国家/地区</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="total_modes">0</div>
+                        <div class="label">通信模式</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>✅ 呼号验证</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="value" style="color:#4CAF50" id="validated_count">0</div>
+                        <div class="label">已验证</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" style="color:#ff6b6b" id="unvalidated_count">0</div>
+                        <div class="label">未验证</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #888;">
+                        <span>验证率</span>
+                        <span id="validation_rate">0%</span>
+                    </div>
+                    <div class="dxcc-bar">
+                        <div id="validation_bar" class="dxcc-bar-inner validated" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.75rem; color: #666; margin-top: 8px;">
+                    验证数据库: <span id="allcall_size">0</span> 个呼号
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🌍 DXCC 分析</h3>
+                <div class="country-list" id="dxcc_list"></div>
+            </div>
+            
+            <div class="card">
+                <h3>📻 模式分布</h3>
+                <div class="mode-list" id="mode_list"></div>
+            </div>
+            
+            <div class="card">
+                <h3>🌍 国家/地区 TOP 10</h3>
+                <div class="country-list" id="country_list"></div>
+            </div>
+            
+            <div class="card">
+                <h3>📡 波段传播分析</h3>
+                <div class="band-list" id="band_list"></div>
+                <div style="margin-top: 15px;">
+                    <h4 style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">最佳传播时间</h4>
+                    <div id="best_time"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            <button class="refresh-btn" id="refreshBtn">🔄 刷新数据</button>
+            <div class="legend">
+                <h4>图例</h4>
+                <div class="legend-item">
+                    <div class="legend-color my-location"></div>
+                    <span id="legend_callsign">本台</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color sender"></div>
+                    <span>发射记录 (被他台接收)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color receiver"></div>
+                    <span>接收记录 (收到他台)</span>
+                </div>
+            </div>
+            <div class="loading" id="loading">正在加载数据...</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let polylines = [];
+        let myLocation = [40.02, 116.29]; // 默认位置
+        let currentCallsign = "BG1SB";
+        let currentGrid = "ON80da";
+        let myMarker = null;  // 本台标记
+        
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                currentCallsign = config.callsign;
+                currentGrid = config.grid;
+                myLocation = config.location;
+                
+                // 更新页面标题
+                document.title = 'PSK Reporter 地图分析 - ' + currentCallsign;
+                document.getElementById('callsign_title').textContent = currentCallsign + ' 传播地图分析';
+                document.getElementById('legend_callsign').textContent = currentCallsign + ' (本台)';
+                
+                // 更新本台标记位置
+                if (myMarker) {
+                    myMarker.setLatLng(myLocation);
+                    myMarker.bindPopup('<b>' + currentCallsign + '</b><br>本台位置<br>网格: ' + currentGrid);
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+        
+        function initMap() {
+            map = L.map('map').setView([35, 120], 3);
+            
+            // 使用高德地图瓦片 (国内可访问)
+            L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+                attribution: '© 高德地图',
+                subdomains: ['1', '2', '3', '4']
+            }).addTo(map);
+            
+            // 本台位置标记
+            const myIcon = L.divIcon({
+                className: 'my-marker',
+                html: '<div style="background:#e94560;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(233,69,96,0.5);"></div>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            
+            myMarker = L.marker(myLocation, { icon: myIcon })
+                .addTo(map)
+                .bindPopup('<b>' + currentCallsign + '</b><br>本台位置<br>网格: ' + currentGrid);
+        }
+        
+        function setDefaultTimeRange() {
+            const now = new Date();
+            const start = new Date(now - 24 * 60 * 60 * 1000);
+            document.getElementById('end_time').value = now.toISOString().slice(0, 16);
+                        // 自动触发查询
+                        fetchData();
+            document.getElementById('start_time').value = start.toISOString().slice(0, 16);
+        }
+        
+        function clearMap() {
+            markers.forEach(m => map.removeLayer(m));
+            polylines.forEach(p => map.removeLayer(p));
+            markers = [];
+            polylines = [];
+        }
+        
+        function addMarker(record, type) {
+            const color = type === 'sender' ? '#4CAF50' : '#2196F3';
+            
+            const icon = L.divIcon({
+                className: 'record-marker',
+                html: '<div style="background:' + color + ';width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 5px rgba(0,0,0,0.3);"></div>',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+            
+            const marker = L.marker([record.lat, record.lon], { icon: icon }).addTo(map);
+            
+            const popupContent = '<div class="record-detail">' +
+                '<p><span class="label">呼号:</span> <b>' + record.callsign + '</b></p>' +
+                '<p><span class="label">网格:</span> ' + record.locator + '</p>' +
+                '<p><span class="label">频率:</span> ' + (record.frequency / 1000).toFixed(2) + ' kHz</p>' +
+                '<p><span class="label">模式:</span> ' + record.mode + '</p>' +
+                '<p><span class="label">SNR:</span> ' + record.snr + ' dB</p>' +
+                '<p><span class="label">距离:</span> ' + (record.distance ? record.distance.toFixed(1) + ' km' : 'N/A') + '</p>' +
+                '<p><span class="label">国家:</span> ' + (record.country || 'N/A') + '</p>' +
+                '<p><span class="label">时间:</span> ' + new Date(record.qso_time).toLocaleString() + '</p>' +
+                '</div>';
+            
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+            
+            // 绘制连线
+            const polyline = L.polyline([myLocation, [record.lat, record.lon]], {
+                color: color,
+                weight: 1,
+                opacity: 0.4,
+                dashArray: '5, 10'
+            }).addTo(map);
+            polylines.push(polyline);
+            
+            return marker;
+        }
+        
+        async function fetchData() {
+            const startTime = document.getElementById('start_time').value;
+            const endTime = document.getElementById('end_time').value;
+            
+            const showSender = document.querySelector('.type-btn.sender').classList.contains('active');
+            const showReceiver = document.querySelector('.type-btn.receiver').classList.contains('active');
+            
+            let type = 'all';
+            if (showSender && !showReceiver) type = 'sender';
+            if (!showSender && showReceiver) type = 'receiver';
+            
+            document.getElementById('loading').classList.add('show');
+            
+            try {
+                const params = new URLSearchParams();
+                if (startTime) params.append('start_time', startTime.replace('T', ' ') + ':00');
+                if (endTime) params.append('end_time', endTime.replace('T', ' ') + ':00');
+                params.append('type', type);
+                params.append('limit', '2000');
+                params.append('callsign', currentCallsign);  // 添加呼号参数
+                
+                const response = await fetch('/api/records?' + params);
+                const data = await response.json();
+                
+                clearMap();
+                
+                if (showSender && data.sender_records) {
+                    data.sender_records.forEach(record => addMarker(record, 'sender'));
+                }
+                
+                if (showReceiver && data.receiver_records) {
+                    data.receiver_records.forEach(record => addMarker(record, 'receiver'));
+                }
+                
+                document.getElementById('sender_count').textContent = data.total_sender || 0;
+                document.getElementById('receiver_count').textContent = data.total_receiver || 0;
+                
+                if (markers.length > 0) {
+                    const group = L.featureGroup(markers);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                }
+                
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                alert('获取数据失败: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+        
+        async function fetchStats() {
+            try {
+                const startTime = document.getElementById('start_time').value;
+                const endTime = document.getElementById('end_time').value;
+                const params = new URLSearchParams();
+                if (startTime) params.append('start_time', startTime.replace('T', ' ') + ':00');
+                if (endTime) params.append('end_time', endTime.replace('T', ' ') + ':00');
+                params.append('callsign', currentCallsign);
+                
+                const response = await fetch('/api/stats?' + params);
+                const stats = await response.json();
+                
+                const modeList = document.getElementById('mode_list');
+                modeList.innerHTML = stats.modes.map(m => 
+                    '<div class="mode-item"><span class="mode-name">' + (m.mode || 'Unknown') + '</span><span class="mode-count">' + m.cnt + '</span></div>'
+                ).join('');
+                
+                const countryList = document.getElementById('country_list');
+                countryList.innerHTML = stats.top_countries.map((c, i) => 
+                    '<div class="country-item"><span><span class="country-rank">' + (i + 1) + '.</span>' + c.country + '</span><span class="mode-count">' + c.cnt + '</span></div>'
+                ).join('');
+                
+                document.getElementById('total_countries').textContent = stats.top_countries.length;
+                document.getElementById('total_modes').textContent = stats.modes.length;
+                
+            } catch (error) {
+                console.error('获取统计失败:', error);
+            }
+        }
+        
+        async function fetchDxccAnalysis() {
+            try {
+                const startTime = document.getElementById('start_time').value;
+                const endTime = document.getElementById('end_time').value;
+                const params = new URLSearchParams();
+                if (startTime) params.append('start_time', startTime.replace('T', ' ') + ':00');
+                if (endTime) params.append('end_time', endTime.replace('T', ' ') + ':00');
+                params.append('callsign', currentCallsign);
+                
+                const response = await fetch('/api/dxcc_analysis?' + params);
+                const data = await response.json();
+                
+                document.getElementById('validated_count').textContent = data.validated_count;
+                document.getElementById('unvalidated_count').textContent = data.unvalidated_count;
+                document.getElementById('validation_rate').textContent = data.validation_rate + '%';
+                document.getElementById('validation_bar').style.width = data.validation_rate + '%';
+                document.getElementById('allcall_size').textContent = data.allcall_db_size;
+                
+                const dxccList = document.getElementById('dxcc_list');
+                dxccList.innerHTML = data.dxcc_stats.slice(0, 10).map(d => 
+                    '<div class="country-item" style="flex-direction:column;align-items:flex-start;">' +
+                    '<div style="display:flex;justify-content:space-between;width:100%;">' +
+                    '<span>' + d.country + '</span><span>' + d.count + '</span>' +
+                    '</div>' +
+                    '<div style="display:flex;font-size:0.7rem;color:#666;width:100%;">' +
+                    '<span style="color:#4CAF50;">✓' + d.validated + '</span>' +
+                    '<span style="margin-left:8px;color:#ff6b6b;">✗' + d.unvalidated + '</span>' +
+                    '<span style="margin-left:auto;">' + d.validation_rate + '%</span>' +
+                    '</div></div>'
+                ).join('');
+                
+            } catch (error) {
+                console.error('获取 DXCC 分析失败:', error);
+            }
+        }
+        
+        async function fetchBandAnalysis() {
+            try {
+                const startTime = document.getElementById('start_time').value;
+                const endTime = document.getElementById('end_time').value;
+                const params = new URLSearchParams();
+                if (startTime) params.append('start_time', startTime.replace('T', ' ') + ':00');
+                if (endTime) params.append('end_time', endTime.replace('T', ' ') + ':00');
+                
+                params.append('callsign', currentCallsign);
+                const response = await fetch('/api/band_analysis?' + params);
+                const data = await response.json();
+                
+                // 计算最大值用于比例
+                const maxCount = Math.max(...data.bands.map(b => b.count), 1);
+                
+                // 更新波段列表
+                const bandList = document.getElementById('band_list');
+                bandList.innerHTML = data.bands.slice(0, 8).map(b => {
+                    const percent = (b.count / maxCount * 100).toFixed(1);
+                    return '<div class="band-item">' +
+                        '<span class="band-name">' + b.band + '</span>' +
+                        '<div class="band-bar-container">' +
+                        '<div class="band-bar"><div class="band-bar-fill" style="width:' + percent + '%"></div></div>' +
+                        '</div>' +
+                        '<span class="band-count">' + b.count.toLocaleString() + '</span>' +
+                        '</div>';
+                }).join('');
+                
+                // 更新最佳时间
+                const bestTime = document.getElementById('best_time');
+                const bestTimeHtml = Object.entries(data.best_time)
+                    .filter(([band, info]) => info.count > 10) // 过滤掉数据太少的
+                    .sort((a, b) => b[1].count - a[1].count)
+                    .slice(0, 5)
+                    .map(([band, info]) => {
+                        const hourStr = info.best_hour.toString().padStart(2, '0') + ':00 UTC';
+                        return '<div class="best-time-item">' +
+                            '<span class="best-time-band">' + band + '</span>' +
+                            '<span>' + hourStr + '</span>' +
+                            '<span class="best-time-hour">' + info.count + '次</span>' +
+                            '</div>';
+                    }).join('');
+                bestTime.innerHTML = bestTimeHtml || '<div style="color:#666;font-size:0.8rem;">数据不足</div>';
+                
+            } catch (error) {
+                console.error('获取波段分析失败:', error);
+            }
+        }
+        
+        function bindEvents() {
+            document.querySelectorAll('.quick-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const hours = parseInt(this.dataset.hours);
+                    const now = new Date();
+                    
+                    if (hours === 0) {
+                        document.getElementById('start_time').value = '';
+                        document.getElementById('end_time').value = '';
+                    } else {
+                        const start = new Date(now - hours * 60 * 60 * 1000);
+                        document.getElementById('start_time').value = start.toISOString().slice(0, 16);
+                        document.getElementById('end_time').value = now.toISOString().slice(0, 16);
+                        // 自动触发查询
+                        fetchData();
+                        fetchBandAnalysis();
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+            
+            document.getElementById('queryBtn').addEventListener('click', function() {
+                fetchData();
+                fetchDxccAnalysis();
+                fetchBandAnalysis();
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                fetchData();
+                fetchStats();
+                fetchDxccAnalysis();
+                fetchBandAnalysis();
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadConfig();  // 先加载配置
+            initMap();
+            setDefaultTimeRange();
+            bindEvents();
+            fetchStats();
+            fetchDxccAnalysis();
+            fetchBandAnalysis();
+            fetchData();
+        });
+    </script>
+{% endblock %}

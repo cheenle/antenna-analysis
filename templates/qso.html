@@ -1,0 +1,771 @@
+{% extends "base.html" %}
+
+{% block title %}通联日志{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block styles %}
+        .container {
+            display: flex;
+            height: calc(100vh - 52px);
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            width: 350px;
+            background: #1a1a2e;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        /* 卡片 */
+        .card {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .card h3 {
+            color: #e94560;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* 统计网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .stat-item {
+            background: #1a1a2e;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-item .value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #e94560;
+        }
+        
+        .stat-item .label {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 3px;
+        }
+        
+        /* 进度条 */
+        .progress-bar {
+            background: #0f3460;
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        /* 列表项 */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+            font-size: 0.85rem;
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .list-rank {
+            color: #666;
+            margin-right: 8px;
+            font-size: 0.75rem;
+        }
+        
+        .list-count {
+            color: #e94560;
+            font-weight: bold;
+        }
+        
+        /* 条形图 */
+        .bar-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+        }
+        
+        .bar-label {
+            width: 60px;
+            font-weight: bold;
+            color: #e94560;
+            font-size: 0.85rem;
+        }
+        
+        .bar-container {
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .bar {
+            height: 12px;
+            background: #0f3460;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+        }
+        
+        .bar-value {
+            width: 50px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 地图容器 */
+        .map-section {
+            height: 50%;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 表格区 */
+        .table-section {
+            height: 50%;
+            padding: 15px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .table-header h3 {
+            color: #e94560;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-bar select, .filter-bar input {
+            padding: 6px 10px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #eee;
+            font-size: 0.85rem;
+        }
+        
+        .table-container {
+            flex: 1;
+            overflow: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        th, td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        
+        th {
+            background: #1a1a2e;
+            color: #e94560;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background: #1a1a2e;
+        }
+        
+        .band-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .band-160m { background: #8B4513; color: #fff; }
+        .band-80m { background: #FF6347; color: #fff; }
+        .band-40m { background: #FF8C00; color: #fff; }
+        .band-30m { background: #FFD700; color: #000; }
+        .band-20m { background: #32CD32; color: #000; }
+        .band-17m { background: #00CED1; color: #000; }
+        .band-15m { background: #1E90FF; color: #fff; }
+        .band-12m { background: #9370DB; color: #fff; }
+        .band-10m { background: #FF69B4; color: #000; }
+        .band-6m { background: #00FA9A; color: #000; }
+        .band-2m { background: #DC143C; color: #fff; }
+        
+        /* 地图图例 */
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 10px;
+            background: rgba(26, 26, 46, 0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            font-size: 0.8rem;
+        }
+        
+        .legend-title {
+            color: #e94560;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        /* 大洲统计 */
+        .continent-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .continent-item {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .continent-name {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        .continent-count {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        /* 时间分布热力图 */
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: 2px;
+            margin-top: 10px;
+        }
+        
+        .heatmap-cell {
+            height: 20px;
+            border-radius: 2px;
+            background: #1a1a2e;
+            transition: background 0.2s;
+        }
+        
+        .heatmap-labels {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr);
+            gap: 2px;
+            margin-top: 3px;
+            font-size: 0.6rem;
+            color: #666;
+            text-align: center;
+        }
+        
+        /* 加载状态 */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 46, 0.95);
+            padding: 20px 40px;
+            border-radius: 10px;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .loading.show { display: block; }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="sidebar">
+            <!-- 总体统计 -->
+            <div class="card">
+                <h3>📊 通联统计</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="value" id="total_qsos">0</div>
+                        <div class="label">总通联</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="unique_callsigns">0</div>
+                        <div class="label">不同呼号</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="unique_countries">0</div>
+                        <div class="label">DXCC实体</div>
+                    </div>
+                </div>
+                <div style="margin-top: 12px; font-size: 0.8rem; color: #888;">
+                    <span id="first_qso">-</span> 至 <span id="last_qso">-</span>
+                </div>
+            </div>
+            
+            <!-- DXCC 进度 -->
+            <div class="card">
+                <h3>🌍 DXCC 实体进度</h3>
+                <div class="continent-grid" id="continent_stats"></div>
+                <div style="margin-top: 12px;">
+                    <div class="list-item" style="font-weight: bold; color: #e94560;">
+                        <span>国家/地区</span>
+                        <span>通联次数</span>
+                    </div>
+                    <div id="country_list" style="max-height: 180px; overflow-y: auto;"></div>
+                </div>
+            </div>
+            
+            <!-- 波段统计 -->
+            <div class="card">
+                <h3>📡 波段分布</h3>
+                <div id="band_stats"></div>
+            </div>
+            
+            <!-- 模式统计 -->
+            <div class="card">
+                <h3>📻 模式分布</h3>
+                <div id="mode_stats"></div>
+            </div>
+            
+            <!-- 通联时间分布 -->
+            <div class="card">
+                <h3>🕐 通联时间分布 (UTC)</h3>
+                <div class="heatmap-container" id="hourly_heatmap"></div>
+                <div class="heatmap-labels">
+                    <span>0</span><span></span><span></span><span>3</span>
+                    <span></span><span></span><span>6</span><span></span>
+                    <span></span><span>9</span><span></span><span></span>
+                    <span>12</span><span></span><span></span><span>15</span>
+                    <span></span><span></span><span>18</span><span></span>
+                    <span></span><span>21</span><span></span><span></span>
+                </div>
+            </div>
+            
+            <!-- 最远通联 -->
+            <div class="card">
+                <h3>📏 最远通联 TOP 5</h3>
+                <div id="longest_qsos"></div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- 地图 -->
+            <div class="map-section">
+                <div id="map"></div>
+                <div class="map-legend">
+                    <div class="legend-title">通联地图</div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #e94560;"></div>
+                        <span>本台位置</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #4CAF50;"></div>
+                        <span>已通联电台</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 通联记录表 -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h3>📋 通联记录</h3>
+                    <div class="filter-bar">
+                        <select id="filter_band">
+                            <option value="">全部波段</option>
+                            <option value="160m">160m</option>
+                            <option value="80m">80m</option>
+                            <option value="40m">40m</option>
+                            <option value="30m">30m</option>
+                            <option value="20m">20m</option>
+                            <option value="17m">17m</option>
+                            <option value="15m">15m</option>
+                            <option value="12m">12m</option>
+                            <option value="10m">10m</option>
+                            <option value="6m">6m</option>
+                            <option value="2m">2m</option>
+                        </select>
+                        <select id="filter_mode">
+                            <option value="">全部模式</option>
+                            <option value="FT8">FT8</option>
+                            <option value="FT4">FT4</option>
+                            <option value="JT65">JT65</option>
+                            <option value="JT9">JT9</option>
+                            <option value="CW">CW</option>
+                            <option value="SSB">SSB</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>时间</th>
+                                <th>呼号</th>
+                                <th>波段</th>
+                                <th>模式</th>
+                                <th>频率</th>
+                                <th>信号</th>
+                                <th>网格</th>
+                                <th>距离</th>
+                                <th>国家</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qso_table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">正在加载数据...</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let polylines = [];
+        let myLocation = [40.02, 116.29];
+        let myGrid = 'ON80da';
+        
+        // 颜色映射
+        const bandColors = {
+            '160m': '#8B4513', '80m': '#FF6347', '40m': '#FF8C00',
+            '30m': '#FFD700', '20m': '#32CD32', '17m': '#00CED1',
+            '15m': '#1E90FF', '12m': '#9370DB', '10m': '#FF69B4',
+            '6m': '#00FA9A', '2m': '#DC143C'
+        };
+        
+        // 初始化地图
+        function initMap() {
+            map = L.map('map').setView([35, 120], 2);
+            
+            L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+                attribution: '© 高德地图',
+                subdomains: ['1', '2', '3', '4']
+            }).addTo(map);
+            
+            // 本台位置
+            const myIcon = L.divIcon({
+                className: 'my-marker',
+                html: '<div style="background:#e94560;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(233,69,96,0.8);"></div>',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            
+            L.marker(myLocation, { icon: myIcon })
+                .addTo(map)
+                .bindPopup('<b>BG1SB</b><br>本台位置<br>网格: ' + myGrid);
+        }
+        
+        // 加载统计数据
+        async function loadStats() {
+            showLoading();
+            try {
+                const response = await fetch('/api/qso/stats');
+                const data = await response.json();
+                
+                document.getElementById('total_qsos').textContent = data.total_qsos || 0;
+                document.getElementById('unique_callsigns').textContent = data.unique_callsigns || 0;
+                document.getElementById('unique_countries').textContent = data.unique_countries || 0;
+                
+                if (data.first_qso) {
+                    document.getElementById('first_qso').textContent = data.first_qso.slice(0, 10);
+                }
+                if (data.last_qso) {
+                    document.getElementById('last_qso').textContent = data.last_qso.slice(0, 10);
+                }
+                
+                // 波段统计
+                const bandStats = document.getElementById('band_stats');
+                const maxBand = Math.max(...(data.by_band || []).map(b => b.count), 1);
+                bandStats.innerHTML = (data.by_band || []).slice(0, 8).map(b => {
+                    const percent = (b.count / maxBand * 100).toFixed(0);
+                    return '<div class="bar-item">' +
+                        '<span class="bar-label">' + b.band + '</span>' +
+                        '<div class="bar-container"><div class="bar"><div class="bar-fill" style="width:' + percent + '%"></div></div></div>' +
+                        '<span class="bar-value">' + b.count + '</span>' +
+                        '</div>';
+                }).join('');
+                
+                // 模式统计
+                const modeStats = document.getElementById('mode_stats');
+                const maxMode = Math.max(...(data.by_mode || []).map(m => m.count), 1);
+                modeStats.innerHTML = (data.by_mode || []).slice(0, 5).map(m => {
+                    const percent = (m.count / maxMode * 100).toFixed(0);
+                    return '<div class="bar-item">' +
+                        '<span class="bar-label">' + m.mode + '</span>' +
+                        '<div class="bar-container"><div class="bar"><div class="bar-fill" style="width:' + percent + '%"></div></div></div>' +
+                        '<span class="bar-value">' + m.count + '</span>' +
+                        '</div>';
+                }).join('');
+                
+                // 时间分布热力图
+                const heatmap = document.getElementById('hourly_heatmap');
+                const hourData = new Array(24).fill(0);
+                (data.by_hour || []).forEach(h => {
+                    hourData[h.hour] = h.count;
+                });
+                const maxHour = Math.max(...hourData, 1);
+                heatmap.innerHTML = hourData.map(count => {
+                    const intensity = count / maxHour;
+                    const r = Math.round(intensity * 233);
+                    const g = Math.round(intensity * 69 + (1-intensity) * 26);
+                    const b = Math.round(intensity * 96 + (1-intensity) * 46);
+                    return '<div class="heatmap-cell" style="background:rgb(' + r + ',' + g + ',' + b + ')" title="' + count + '次"></div>';
+                }).join('');
+                
+                // 最远通联
+                const longestQsos = document.getElementById('longest_qsos');
+                longestQsos.innerHTML = (data.longest_qsos || []).map((q, i) => {
+                    return '<div class="list-item">' +
+                        '<span><span class="list-rank">' + (i+1) + '</span>' + q.callsign + '</span>' +
+                        '<span class="list-count">' + (q.distance ? q.distance.toFixed(0) + ' km' : '-') + '</span>' +
+                        '</div>';
+                }).join('');
+                
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+            hideLoading();
+        }
+        
+        // 加载 DXCC 进度
+        async function loadDxccProgress() {
+            try {
+                const response = await fetch('/api/qso/dxcc_progress');
+                const data = await response.json();
+                
+                // 大洲统计
+                const continentStats = document.getElementById('continent_stats');
+                const continents = [
+                    { key: 'Asia', name: '亚洲' },
+                    { key: 'Europe', name: '欧洲' },
+                    { key: 'North America', name: '北美' },
+                    { key: 'South America', name: '南美' },
+                    { key: 'Oceania', name: '大洋洲' },
+                    { key: 'Africa', name: '非洲' }
+                ];
+                
+                continentStats.innerHTML = continents.map(c => {
+                    const count = (data.by_continent || {})[c.key]?.count || 0;
+                    return '<div class="continent-item">' +
+                        '<div class="continent-name">' + c.name + '</div>' +
+                        '<div class="continent-count">' + count + '</div>' +
+                        '</div>';
+                }).join('');
+                
+                // 国家列表
+                const countryList = document.getElementById('country_list');
+                countryList.innerHTML = (data.countries || []).slice(0, 15).map((c, i) => {
+                    return '<div class="list-item">' +
+                        '<span><span class="list-rank">' + (i+1) + '</span>' + c.country + '</span>' +
+                        '<span class="list-count">' + c.count + '</span>' +
+                        '</div>';
+                }).join('');
+                
+            } catch (error) {
+                console.error('加载 DXCC 进度失败:', error);
+            }
+        }
+        
+        // 加载地图数据
+        async function loadMapData() {
+            try {
+                const response = await fetch('/api/qso/map_data');
+                const data = await response.json();
+                
+                // 清除旧标记
+                markers.forEach(m => map.removeLayer(m));
+                polylines.forEach(p => map.removeLayer(p));
+                markers = [];
+                polylines = [];
+                
+                (data.locations || []).forEach(loc => {
+                    const icon = L.divIcon({
+                        className: 'qso-marker',
+                        html: '<div style="background:#4CAF50;width:10px;height:10px;border-radius:50%;border:2px solid white;box-shadow:0 0 5px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [10, 10],
+                        iconAnchor: [5, 5]
+                    });
+                    
+                    const marker = L.marker([loc.lat, loc.lon], { icon: icon }).addTo(map);
+                    marker.bindPopup(
+                        '<b>' + loc.callsign + '</b><br>' +
+                        '网格: ' + loc.grid + '<br>' +
+                        '国家: ' + (loc.country || '-') + '<br>' +
+                        '通联次数: ' + loc.qso_count + '<br>' +
+                        '距离: ' + (loc.distance ? loc.distance.toFixed(0) + ' km' : '-')
+                    );
+                    markers.push(marker);
+                    
+                    // 连线
+                    const line = L.polyline([myLocation, [loc.lat, loc.lon]], {
+                        color: '#4CAF50',
+                        weight: 1,
+                        opacity: 0.3,
+                        dashArray: '5, 10'
+                    }).addTo(map);
+                    polylines.push(line);
+                });
+                
+                // 调整视野
+                if (markers.length > 0) {
+                    const group = L.featureGroup(markers);
+                    map.fitBounds(group.getBounds().pad(0.2));
+                }
+                
+            } catch (error) {
+                console.error('加载地图数据失败:', error);
+            }
+        }
+        
+        // 加载通联记录表
+        async function loadQsoRecords() {
+            const band = document.getElementById('filter_band').value;
+            const mode = document.getElementById('filter_mode').value;
+            
+            const params = new URLSearchParams();
+            if (band) params.append('band', band);
+            if (mode) params.append('mode', mode);
+            params.append('limit', '300');
+            
+            try {
+                const response = await fetch('/api/qso/records?' + params);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('qso_table');
+                tbody.innerHTML = (data.records || []).map(r => {
+                    const bandClass = 'band-' + (r.band || 'other').replace('.', '-');
+                    const time = r.qso_time ? r.qso_time.slice(11, 16) : '-';
+                    const date = r.qso_date ? r.qso_date.slice(0, 10) : '-';
+                    const freq = r.frequency ? r.frequency.toFixed(4) : '-';
+                    const dist = r.distance ? r.distance.toFixed(0) : '-';
+                    const signal = (r.rst_sent || '?') + '/' + (r.rst_rcvd || '?');
+                    
+                    return '<tr>' +
+                        '<td>' + date + '</td>' +
+                        '<td>' + time + '</td>' +
+                        '<td><b>' + r.callsign + '</b></td>' +
+                        '<td><span class="band-badge ' + bandClass + '">' + (r.band || '-') + '</span></td>' +
+                        '<td>' + (r.mode || '-') + '</td>' +
+                        '<td>' + freq + '</td>' +
+                        '<td>' + signal + '</td>' +
+                        '<td>' + (r.grid_locator || '-') + '</td>' +
+                        '<td>' + dist + '</td>' +
+                        '<td>' + (r.country || '-') + '</td>' +
+                        '</tr>';
+                }).join('');
+                
+            } catch (error) {
+                console.error('加载记录失败:', error);
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        // 绑定筛选事件
+        document.getElementById('filter_band').addEventListener('change', loadQsoRecords);
+        document.getElementById('filter_mode').addEventListener('change', loadQsoRecords);
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            initMap();
+            await Promise.all([
+                loadStats(),
+                loadDxccProgress(),
+                loadMapData(),
+                loadQsoRecords()
+            ]);
+        });
+    </script>
+{% endblock %}
