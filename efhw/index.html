@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="EFHW 端馈半波天线知识体系 — 从原理、DIY 制作，到用 PSK Reporter 大数据观测真实方向图的完整方法论。理论推导与实测观测分层呈现，尊重科学的不确定性。BG1SB / www.vlsc.net">
+<meta name="keywords" content="EFHW, 端馈半波天线, End-Fed Half-Wave, 49:1, unun, 业余无线电, HAM, 天线 DIY, 多波段天线, PSK Reporter, 天线方向图">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>EFHW 端馈半波天线知识体系 · 原理 × 大数据 × 闭环观测 | www.vlsc.net</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="/efhw/" class="logo"><span>📡</span><span>EFHW 知识体系</span></a>
+    <div class="nav-links">
+      <a href="/efhw/" class="active">总览</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">对比试验</a>
+      <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener">知识库 ↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div class="badge">📡 End-Fed Half-Wave · 端馈半波天线知识体系</div>
+    <h1>一根线背后的<span class="grad">物理、工程与数据</span></h1>
+    <p>这是一份关于 EFHW 端馈半波天线的系统性整理：从基本原理与亲手绕制变压器，到把 PSK Reporter 上的真实接收报文当作远场探针，观测一副天线在真实电离层下的表现。我们尽量把"已被实测支持的""由理论推导的""仍待验证的"三类陈述分开标注。</p>
+    <div class="hero-btns">
+      <a href="#map" class="btn btn-primary">🗺 从知识地图开始</a>
+      <a href="case.html" class="btn btn-ghost">🔬 看一个完整实测案例</a>
+    </div>
+  </div>
+</header>
+
+<!-- 这套体系是怎么组织的 -->
+<section class="first" id="approach">
+  <div class="container narrow">
+    <div class="sec-tag">How this is organized</div>
+    <h2 class="sec-h">这套体系想做的事</h2>
+    <div class="prose">
+      <p>关于 EFHW 的资料很多，但大多停留在两端：要么是厂商的宣传话术，要么是论坛里互相矛盾的经验之谈。一个动手的爱好者常常很难判断，某个说法到底是<b>经过测量证实的</b>、是<b>从物理推导出来的</b>，还是<b>某个特定环境下的个例观察</b>。</p>
+      <p>这份资料尝试把一条完整的认知链条走通：<b>理论 → 动手 → 用数据观测自己的天线 → 对照理论 → 找到可改进处 → 复测验证</b>。它建立在两块基础之上——一块是公开的 EFHW 理论文献（AA5TB、PA9X、N6CC、ON6URE 等前辈的工作），另一块是 PSK Reporter 上数十万条真实的传播报告。</p>
+      <p>我们对每一条结论都尽量标注它的证据来源与强度。无线电传播受太阳活动、季节、昼夜、对端设备等大量变量影响，很多观测只能算"在现有数据下的阶段性认识"，而非定论。下面这个标注体系会贯穿全站：</p>
+    </div>
+
+    <div class="legend">
+      <span class="item"><span class="conf conf-measured">实测支持</span> 有本站或第三方测量数据支撑</span>
+      <span class="item"><span class="conf conf-derived">理论推导</span> 由物理或几何计算得出，尚待实测</span>
+      <span class="item"><span class="conf conf-open">待验证</span> 阶段性观察，样本或前提仍有限</span>
+    </div>
+
+    <div class="callout note">
+      <b>一个前提：</b>本站的实测部分以业余电台 BG1SB（北京 ON80）的一副 20m 端馈天线为主要研究对象。这意味着很多具体数字是"这一副天线、这个环境"的结果。方法可以借鉴，结论请勿直接套用到你自己的天线上——更好的做法是用同样的方法观测你自己的天线。
+    </div>
+  </div>
+</section>
+
+<!-- 知识地图：模块结构与逻辑 -->
+<section id="map">
+  <div class="container">
+    <div class="sec-tag">Knowledge Map</div>
+    <h2 class="sec-h">知识地图：六个模块如何衔接</h2>
+    <p class="sec-sub">整套内容按认知顺序分成六个模块。你可以顺着读，也可以直接跳到关心的部分。每个模块对应 efhw-knowledge 知识库里的相应板块。</p>
+
+    <div class="map-step">
+      <div class="mn">1</div>
+      <div class="mb">
+        <h4><a href="principle.html">工作原理</a></h4>
+        <p>半波末端为什么呈现高阻、49:1 变换从何而来、谐波如何带来多波段、为什么仍需要一点参考地。理解这四点，调试时才能心里有数。</p>
+        <span class="tag">对应知识库 · §1 原理 / §4 counterpoise / §5 谐波运作</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">2</div>
+      <div class="mb">
+        <h4><a href="build.html">动手制作</a></h4>
+        <p>49:1 变压器的绕制配方、线长计算器、从备料到调驻波的完整步骤。这是把理论变成一副能用的天线的环节。</p>
+        <span class="tag">对应知识库 · §2 变压器设计 / §3 共模扼流圈 / §9 DIY 指南</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">3</div>
+      <div class="mb">
+        <h4><a href="performance.html">性能与讨论</a></h4>
+        <p>EFHW 的真实性能边界在哪、多波段是否有代价、TX/RX 分离的思路、NEC 建模给出的方向图特征。这里汇集了社区中几个重要而又常被误解的讨论，我们尽量呈现各方前提而非简单评判。</p>
+        <span class="tag">对应知识库 · §6 真实性能与局限 / §3.5 TX/RX 分离 / §8 NEC 建模</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">4</div>
+      <div class="mb">
+        <h4><a href="data.html">数据方法论</a></h4>
+        <p>怎样把 PSK Reporter 的接收报文当作远场探针？为什么"与同网格邻居作差"能在一定程度上剥离传播与人口的影响？这一模块讲清方法本身的逻辑与它的局限。</p>
+        <span class="tag">对应知识库 · references/pskreporter_efhw_validation</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">5</div>
+      <div class="mb">
+        <h4><a href="case.html">BG1SB 实测案例</a></h4>
+        <p>把方法用在一副真实天线上：先由安装几何手算出方向图预测，再用实测报文去对照，最后结合双向通联（QSO/DXCC）记录交叉印证。一个从预测到观测的完整闭环。</p>
+        <span class="tag">对应知识库 · measurements/bg1sb_20m_efhw_case_study</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">6</div>
+      <div class="mb">
+        <h4><a href="data.html#tool">在线分析工具</a><span class="conf conf-open">建设中</span></h4>
+        <p>计划提供一个输入呼号即可分析的在线工具，让任何人都能用同样的方法观测自己的天线。目前可先在分析看板上体验。</p>
+        <span class="tag">数据来源 · PSK Reporter 开放报文</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 核心逻辑：闭环 -->
+<section id="loop">
+  <div class="container narrow">
+    <div class="sec-tag">The Core Loop</div>
+    <h2 class="sec-h">贯穿全站的一条逻辑：可检验的闭环</h2>
+    <p class="sec-sub">这套体系最想传达的，不是某一个结论，而是一种做法——让关于天线的说法变得"可检验"。</p>
+
+    <div class="fig">
+<pre>
+  理论/几何推导            数据观测               对照与诊断
+  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+  │ 由安装几何     │      │ PSK Reporter  │      │ 与同网格邻居   │
+  │ 手算出方向图   │ ───▶ │ 真实报文作为   │ ───▶ │ 作差，看差异   │
+  │ 主瓣/零点预测  │      │ 远场探针       │      │ 落在何处       │
+  └──────────────┘      └──────────────┘      └──────┬───────┘
+        ▲                                            │
+        │                                            ▼
+        │              ┌──────────────┐      ┌──────────────┐
+        └───────────── │ 复测：改造后   │ ◀─── │ 找到可改进处   │
+           闭环          │ 重跑同一分析   │      │ （朝向/架高等）│
+                       └──────────────┘      └──────────────┘
+</pre>
+      <figcaption>理论给出可检验的预测，数据去检验它，差异指向改进方向，改造后再用同样的方法复测——形成闭环。</figcaption>
+    </div>
+
+    <div class="prose">
+      <p>这条闭环里有个关键设计：<b>与同网格邻居作差</b>。同一个网格里的其他电台，面对的是几乎相同的电离层、季节和对端人口分布。把自己的信号报告与他们作差，能在相当程度上抵消这些共同变量，让剩下的差异更多地反映天线、馈线与本地噪声的不同。这不是完美的隔离，但它把"我感觉信号变好了"这种主观判断，向"相对邻居的差值变化了多少 dB"这种可复现的度量推进了一步。</p>
+      <p>需要诚实说明的是：PSK Reporter 数据本身带有偏差——接收站的地理分布并不均匀，某些方向的报文多，未必是天线在该方向强，也可能只是那个方向的接收站和发射活动更密集。<a href="data.html">数据方法论</a>一页会专门讨论这些局限，以及我们如何尽量减轻（而非消除）它们的影响。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 模块入口卡片 -->
+<section id="enter">
+  <div class="container">
+    <div class="sec-tag">Start Reading</div>
+    <h2 class="sec-h">选一个入口</h2>
+    <p class="sec-sub">不确定从哪开始？想动手就去"制作"，想理解为什么就去"原理"，想看数据怎么用就直接读"实测案例"。</p>
+    <div class="grid g3">
+      <a href="principle.html" class="card"><div class="ico">📐</div><h3>工作原理</h3><p>四个核心物理点：高阻末端、49:1 变换、谐波多波段、参考地。理解了它们，调试不再靠猜。</p><span class="more">阅读原理 →</span></a>
+      <a href="build.html" class="card"><div class="ico">🔧</div><h3>动手制作</h3><p>49:1 变压器配方、线长计算器、七步制作与调驻波。从零做出一副能用的天线。</p><span class="more">开始制作 →</span></a>
+      <a href="performance.html" class="card"><div class="ico">⚖️</div><h3>性能与讨论</h3><p>真实性能边界、多波段的代价、TX/RX 分离、NEC 方向图。呈现争论的各方前提。</p><span class="more">了解性能 →</span></a>
+      <a href="data.html" class="card"><div class="ico">📊</div><h3>数据方法论</h3><p>把接收报文当远场探针的逻辑，邻居作差法，以及方法本身的局限与诚实边界。</p><span class="more">理解方法 →</span></a>
+      <a href="case.html" class="card"><div class="ico">🔬</div><h3>BG1SB 实测案例</h3><p>从几何预测到实测对照，再到 DXCC 双向交叉印证的完整闭环。方法的一次实地走查。</p><span class="more">看案例 →</span></a>
+      <a href="tuner-vs-unun.html" class="card"><div class="ico">⚖️</div><h3>49:1 vs LC 调谐器</h3><p>同一天线、同频同功率的对比试验。记录一次方法论自我纠错：从"收报数翻倍"的假象退回"无显著差异"的诚实结论。</p><span class="more">看对比试验 →</span></a>
+      <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener" class="card"><div class="ico">📚</div><h3>完整知识库</h3><p>全部原始资料、参考文献、自动调谐器硬件设计与测量记录，都在开源仓库里。</p><span class="more">访问 GitHub ↗</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="/efhw/">总览</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">对比试验</a>
+      <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener">知识库 ↗</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 整理 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">实测部分基于 PSK Reporter 开放数据 · 内容以学习交流为目的，结论会随数据积累而修订 · 73！</p>
+  </div>
+</footer>
+
+</body>
+</html>

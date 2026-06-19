@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="EFHW 端馈半波天线 DIY 制作 — 49:1 变压器绕制配方、线长计算器、七步制作流程与调驻波方法。BG1SB / www.vlsc.net">
+<meta name="keywords" content="EFHW, 49:1 变压器, unun, FT240-43, 线长计算, 天线 DIY, 业余无线电">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>DIY 制作 · 49:1 变压器与线长 | EFHW 知识体系 · www.vlsc.net</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="index.html" class="logo"><span>📡</span><span>EFHW</span></a>
+    <div class="nav-links">
+      <a href="principle.html">原理</a>
+      <a href="build.html" class="active">制作</a>
+      <a href="performance.html">性能与讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+      <a href="https://www.vlsc.net/">vlsc.net</a>
+    </div>
+  </div>
+</nav>
+
+<header class="phead">
+  <div class="container narrow">
+    <div class="crumb"><a href="index.html">EFHW 知识体系</a> / 制作</div>
+    <h1>DIY 制作：变压器、线长与调试</h1>
+    <p class="lead">EFHW 的硬件只有两样：一个 49:1 阻抗变压器，和一根按波段裁好的导线。下面是经过社区大量实践沉淀的常用配方、一个线长计算器，以及从备料到调好驻波的七步流程。配方为经验推荐值，具体到你的磁环批次与架设环境仍需现场微调。</p>
+  </div>
+</header>
+
+<!-- 49:1 变压器 -->
+<section id="transformer" class="first">
+  <div class="container narrow">
+    <div class="sec-tag">The 49:1 Unun</div>
+    <h2 class="sec-h">49:1 变压器怎么绕</h2>
+    <p class="sec-sub">这是整副天线唯一有技术含量的部分。以下是 100W 级别最常见的 FT240-43 配方，供参考起步。</p>
+
+    <div class="grid g2">
+      <div>
+        <table class="spec">
+          <tr><th>参数</th><th>推荐值</th></tr>
+          <tr><td>磁环</td><td>FT240-43（100W 内）<br>FT240-43 ×2 叠放（更大功率）</td></tr>
+          <tr><td>匝数比</td><td>7:1（阻抗 49:1）</td></tr>
+          <tr><td>初级（50Ω 侧）</td><td>2 匝</td></tr>
+          <tr><td>次级（天线侧）</td><td>14 匝</td></tr>
+          <tr><td>导线</td><td>1.0–1.2mm 漆包线 / 带绝缘硬线</td></tr>
+          <tr><td>补偿电容</td><td>100–150pF / 2kV<br>跨接在初级，改善高波段驻波</td></tr>
+          <tr><td>功率</td><td>单环 ~100W，双环 ~250W+</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="callout">
+          <b>为什么是 2 匝 : 14 匝？</b><br>
+          匝数比 14/2 = 7，阻抗比是匝数比的平方 = 7² = <b>49</b>。50Ω × 49 = 2450Ω，与半波末端的典型高阻接近。
+        </div>
+        <div class="callout warn">
+          <b>绕制要点：</b> 初级 2 匝与次级前 2 匝建议<b>紧密耦合</b>（一起绕、贴在一起），这对高波段的匹配通常有明显帮助。次级剩余匝数沿磁环均匀分布。
+        </div>
+        <div class="callout">
+          <b>那个电容的作用：</b> 100–150pF 高压电容跨接在初级两端，用于补偿磁环在 10/15m 上的漏感。社区普遍反馈它能把高波段驻波从 2.5 左右拉到 1.5 以下，具体数值因磁环而异。
+        </div>
+      </div>
+    </div>
+
+    <div class="callout note">
+      <b>关于 64:1 与 49:1 的选择：</b> 当 counterpoise 较长、馈电点阻抗偏高时，部分操作者改用 64:1（8:1 匝比）。AA5TB 的 MININEC 分析指出 <b>8:1 在最宽的 counterpoise 长度范围内驻波最稳定</b>，这一点在 <a href="performance.html">性能与讨论</a>页有更完整的整理。没有"唯一正确"的匝比，取决于你的实际安装。
+    </div>
+  </div>
+</section>
+
+<!-- 线长计算器 -->
+<section id="calc">
+  <div class="container narrow">
+    <div class="sec-tag">Calculator</div>
+    <h2 class="sec-h">线长计算器</h2>
+    <p class="sec-sub">选择波段或直接输入频率，估算半波长天线所需的实际下线长度。已计入端效应修正系数。</p>
+
+    <div class="calc">
+      <div class="calc-row">
+        <div class="field">
+          <label>选择波段</label>
+          <select id="band" onchange="onBand()">
+            <option value="7.1">40m (7.1 MHz) — 兼顾 40/20/15/10m 多波段</option>
+            <option value="3.6">80m (3.6 MHz)</option>
+            <option value="10.12">30m (10.12 MHz)</option>
+            <option value="14.1">20m (14.1 MHz) — 兼顾 20/10m</option>
+            <option value="18.1">17m (18.1 MHz)</option>
+            <option value="21.1">15m (21.1 MHz)</option>
+            <option value="24.94">12m (24.94 MHz)</option>
+            <option value="28.4">10m (28.4 MHz)</option>
+            <option value="custom">自定义频率…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>频率 (MHz)</label>
+          <input id="freq" type="number" step="0.01" value="7.1" oninput="calc()">
+        </div>
+        <div class="field">
+          <label>速度因子 (端效应)</label>
+          <input id="vf" type="number" step="0.01" value="0.95" oninput="calc()">
+        </div>
+      </div>
+      <div class="calc-out">
+        <div class="out-box"><div class="lbl">半波长理论值 (自由空间)</div><div class="val" id="halfTheory">—<span class="unit">m</span></div></div>
+        <div class="out-box"><div class="lbl">实际下线长度 ⭐</div><div class="val" id="wireLen">—<span class="unit">m</span></div></div>
+        <div class="out-box"><div class="lbl">谐波多波段</div><div class="val" id="harmonics" style="font-size:18px;color:var(--cyan)">—</div></div>
+      </div>
+      <div class="calc-note">
+        ⭐ <b>实际下线长度 = 150 / f(MHz) × 速度因子</b>。速度因子（端效应修正）通常取 0.95–0.97，绝缘线偏低、裸线偏高。<br>
+        建议下线时<b>多留 10–15cm</b> 余量，架好后边测驻波边修剪——每剪一点，谐振频率上移。多波段 EFHW 通常按最低波段（如 40m）取线长。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 制作步骤 -->
+<section id="build">
+  <div class="container narrow">
+    <div class="sec-tag">Build Guide</div>
+    <h2 class="sec-h">七步制作流程</h2>
+    <p class="sec-sub">从材料到架起来调好驻波。每一步的数值为常见起点，最终以你现场的驻波表读数为准。</p>
+
+    <div class="step"><div class="sn">1</div><div class="sb"><h4>备料</h4><p>FT240-43 磁环 ×1、1.0mm 漆包线约 1.5m（绕变压器）、天线主体硬线按计算器结果、SO-239 座、防水盒、100pF/2kV 电容、绝缘端子。</p></div></div>
+    <div class="step"><div class="sn">2</div><div class="sb"><h4>绕初级 2 匝</h4><p>取约 30cm 漆包线，在磁环上绕 2 匝，两端分别接 SO-239 的芯线和地。<span class="tip">穿过磁环中心一次 = 1 匝</span></p></div></div>
+    <div class="step"><div class="sn">3</div><div class="sb"><h4>绕次级 14 匝</h4><p>另取约 1m 线，起点与初级紧贴并行绕 2 匝（紧耦合），随后均匀绕满 14 匝。次级起点接地（与初级共地），末端接天线线。</p></div></div>
+    <div class="step"><div class="sn">4</div><div class="sb"><h4>焊补偿电容</h4><p>把 100–150pF 高压电容焊在初级两端（即 SO-239 芯线与地之间）。这一步通常直接影响 10/15m 的驻波表现。</p></div></div>
+    <div class="step"><div class="sn">5</div><div class="sb"><h4>装盒固定</h4><p>变压器装入防水盒，磁环用热熔胶或扎带固定避免震动断线。天线侧用绝缘端子引出，盒子留挂耳。</p></div></div>
+    <div class="step"><div class="sn">6</div><div class="sb"><h4>接天线线 + 配重</h4><p>接上计算好的主体线。馈线端加一段约 0.05λ 的 counterpoise，或在馈线上加扼流圈（电流巴伦），以稳定方向图、抑制同轴外皮辐射。counterpoise 的作用见 <a href="principle.html#counterpoise">原理页</a>。</p></div></div>
+    <div class="step"><div class="sn">7</div><div class="sb"><h4>架设 + 调驻波</h4><p>斜拉或水平架起（离地越高越好）。用天线分析仪扫频，从最低波段开始：驻波最低点偏高就<b>加长</b>线、偏低就<b>剪短</b>线，每次 5cm 微调。<span class="tip">先调 40m，高波段通常会跟着合理</span></p></div></div>
+
+    <div class="callout warn" style="margin-top:24px"><b>安全提醒：</b> EFHW 末端是<b>高电压点</b>，发射时末端电压可达数千伏。务必把天线末端架在<b>人和动物碰不到</b>的高处，远离金属和电线。</div>
+  </div>
+</section>
+
+<!-- 下一步 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Next</div>
+    <h2 class="sec-h">架好之后</h2>
+    <p class="sec-sub">天线立起来只是开始。接下来可以了解它在各波段的真实表现，以及如何用公开数据观测自己天线的方向图。</p>
+    <div class="grid g2">
+      <a href="performance.html" class="card"><div class="ico">📊</div><h3>性能与讨论</h3><p>多波段效率、80m 与 15m 的已知局限、TX/RX 平衡——把社区的不同观点和前提条件梳理清楚。</p><span class="more">阅读 →</span></a>
+      <a href="data.html" class="card"><div class="ico">🛰</div><h3>用数据观测你的天线</h3><p>把 PSK Reporter 的接收报文当作远场探针，反推主瓣方位、辐射仰角和方向弱区的方法。</p><span class="more">阅读 →</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="index.html">首页</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能与讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 制作 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">配方与数值为社区经验起点，请以你的现场测量为准 · 73！</p>
+  </div>
+</footer>
+
+<script>
+const BANDS = {
+  '3.6':'80m','7.1':'40m','10.12':'30m','14.1':'20m','18.1':'17m','21.1':'15m','24.94':'12m','28.4':'10m'
+};
+function onBand(){
+  const v = document.getElementById('band').value;
+  if(v === 'custom'){ document.getElementById('freq').focus(); return; }
+  document.getElementById('freq').value = v;
+  calc();
+}
+function harmonicsFor(f){
+  const out = [];
+  for(let n=1;n<=4;n++){
+    const hf = f*n;
+    let best=null,bd=1e9;
+    for(const [freq,name] of Object.entries(BANDS)){
+      const d=Math.abs(parseFloat(freq)-hf);
+      if(d<bd){bd=d;best=name;}
+    }
+    if(bd < parseFloat(Object.keys(BANDS).find(k=>BANDS[k]===best))*0.06){
+      if(!out.includes(best)) out.push(best);
+    }
+  }
+  return out;
+}
+function calc(){
+  const f = parseFloat(document.getElementById('freq').value);
+  const vf = parseFloat(document.getElementById('vf').value);
+  if(!f || f<=0 || !vf){ return; }
+  const half = 150/f;
+  const wire = half*vf;
+  document.getElementById('halfTheory').innerHTML = half.toFixed(2)+'<span class="unit">m</span>';
+  document.getElementById('wireLen').innerHTML = wire.toFixed(2)+'<span class="unit">m</span>';
+  const h = harmonicsFor(f);
+  document.getElementById('harmonics').textContent = h.length>1 ? h.join(' / ') : (BANDS[f.toString()]||'单波段');
+}
+calc();
+</script>
+</body>
+</html>

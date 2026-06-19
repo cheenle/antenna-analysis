@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="把 PSK Reporter 的海量 FT8 接收报文当作天线的远场探针——方位是几何硬数据，仰角是模型估计，对邻居差分剥离传播偏差。一套用开放数据观测天线方向图的方法论。BG1SB / www.vlsc.net">
+<meta name="keywords" content="PSK Reporter, FT8, 天线方向图, 远场测量, EFHW, ΔSNR, 圆形统计, 业余无线电">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>数据方法论 — 把接收报文当远场探针 | EFHW 知识体系</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="index.html" class="logo"><span>📡</span><span>EFHW 知识体系</span></a>
+    <div class="nav-links">
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能与讨论</a>
+      <a href="data.html" class="active">数据方法论</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+      <a href="https://www.vlsc.net/">vlsc.net</a>
+    </div>
+  </div>
+</nav>
+
+<header class="phead">
+  <div class="container narrow">
+    <div class="crumb"><a href="index.html">首页</a> / 数据方法论</div>
+    <h1>把每一条接收报文，<br>当作一次免费的远场探针</h1>
+    <p class="lead">天线的方向图通常要在微波暗室或开阔测试场里测。但 PSK Reporter 上每天有几十万条 FT8 接收报告——每一条都记录了"谁、在哪、用多强的信号收到了你"。把这些报文按方位和距离归类，就能在不爬塔、不买仪器的前提下，反推出你的天线在真实电离层下的方向图投影。这一页讲清楚这套方法能测什么、不能测什么。</p>
+  </div>
+</header>
+
+<!-- 核心思想 -->
+<section class="first">
+  <div class="container narrow prose">
+    <div class="sec-tag">The Idea</div>
+    <h2 class="sec-h">自然界的远场测试场</h2>
+    <p>专业的天线方向图测量，需要在远场把一个已知功率的探针绕着天线转一圈，记录每个角度的场强。PSK Reporter 的数据，本质上提供了一个分布式的、永远在线的等效装置：</p>
+    <ul>
+      <li>全球 <b>7 万+ 接收台</b>分布在各个方位和距离上，相当于布满四周的场强计；</li>
+      <li>每条报文带有<b>双方网格坐标</b>，两点之间的大圆方位和距离可以纯几何算出；</li>
+      <li>上报的 <b>SNR</b> 是对端解码器测得的信号强度，大样本平均后能反映相对强弱；</li>
+      <li>FT8 是固定功率、固定调制的标准信号，等效于一个<b>标定过的探针</b>。</li>
+    </ul>
+    <p>把你被收到的所有报文，按方位角分箱、累加信号强度，就得到一张"哪个方向被听得最清楚"的图——这就是你的天线方向图在真实传播条件下的投影。它不是暗室里的纯天线方向图，而是<b>天线 × 电离层 × 对端分布</b>共同作用的结果。理解这一点，是正确解读数据的前提。</p>
+  </div>
+</section>
+
+<!-- 可信度分级 -->
+<section>
+  <div class="container narrow prose">
+    <div class="sec-tag">What's Solid, What's Modeled</div>
+    <h2 class="sec-h">先分清：哪些是硬数据，哪些是模型估计</h2>
+    <p>这套方法的严谨性，取决于诚实区分"几何算出来的事实"和"靠物理模型推出来的估计"。我们对每一类量都标注它的可信度。</p>
+
+    <div class="legend">
+      <span class="item"><span class="conf conf-measured">实测/几何</span> 直接由坐标与上报值得出，无模型假设</span>
+      <span class="item"><span class="conf conf-derived">模型推导</span> 经物理模型换算，作趋势参考</span>
+      <span class="item"><span class="conf conf-open">待核实</span> 受样本量或外部因素影响，谨慎对待</span>
+    </div>
+
+    <table class="spec plain">
+      <tr><th>量</th><th>来源</th><th>可信度</th><th>说明</th></tr>
+      <tr><td>方位角</td><td>两端网格 → 大圆方位</td><td><span class="conf conf-measured">实测/几何</span></td><td>纯几何计算，不含任何假设</td></tr>
+      <tr><td>距离</td><td>两端网格 → 大圆距离</td><td><span class="conf conf-measured">实测/几何</span></td><td>纯几何计算</td></tr>
+      <tr><td>SNR</td><td>对端解码器上报</td><td><span class="conf conf-measured">准实测</span></td><td>受对端天线/噪声影响，大样本平均后稳定</td></tr>
+      <tr><td>相对 ΔSNR</td><td>本台 − 同网格邻居</td><td><span class="conf conf-measured">实测/几何</span></td><td>差分抵消传播共模，天线对比的可靠基准</td></tr>
+      <tr><td>辐射仰角</td><td>距离 → 球面单跳模型反推</td><td><span class="conf conf-derived">模型推导</span></td><td>单跳假设，多跳/混合模式会有偏差，作趋势看</td></tr>
+    </table>
+
+    <div class="callout">
+      <b>一条贯穿全站的原则：</b>凡涉及"方向、方位、相对强弱"的结论，建立在几何硬数据上，可信度较高；凡涉及"绝对仰角度数"，是球面模型反推的估计值，我们只当趋势参考，不作为精确真值。在线分析看板的二维方向图也在图注里诚实标注了这一点。
+    </div>
+  </div>
+</section>
+
+<!-- 对邻居差分 -->
+<section>
+  <div class="container narrow prose">
+    <div class="sec-tag">The Key Trick</div>
+    <h2 class="sec-h">为什么"对邻居差分"是关键</h2>
+    <p>单看自己的 SNR 其实没有意义——今天 20m 条件好，明天差，变化几乎全是电离层在动，跟天线无关。怎么把天线的贡献从传播里剥出来？</p>
+    <p>答案是<b>差分</b>：取<b>同一时段、同一网格</b>（因此面对几乎相同的传播条件）的邻居台作基准，算你和他们的 SNR 差值 ΔSNR。传播是两者的共模量，相减时被抵消，剩下的就主要是天线、馈线、架设高度和本地噪声环境的差异。</p>
+    <div class="fig">
+<pre>绝对 SNR = 天线 + 馈线 + 传播 + 对端 + 噪声 + 当天条件
+邻居 SNR = 邻居天线 + 邻居馈线 + 传播 + 对端 + 噪声 + 当天条件
+─────────────────────────────────────────────────────
+ΔSNR    = (你的天线系统) − (邻居天线系统)     ← 传播被差掉了</pre>
+      <figcaption>ΔSNR 是天线的"体检指标"，绝对 SNR 只是"今天天气"。</figcaption>
+    </div>
+    <p>这也顺带解决了另一个陷阱——<b>人口密度偏差</b>。某个方向报文特别多，往往不是天线在那方向强，而是那个方向接收台密集（例如东亚的 FT8 用户极多）。邻居和你面对的是同一批接收台，差分后这个偏差同样被抵消。所以"对邻居的 ΔSNR"比"自己的报文数峰值"更能反映天线本身。</p>
+  </div>
+</section>
+
+<!-- 五个观测维度 -->
+<section>
+  <div class="container">
+    <div class="sec-tag">Six Views</div>
+    <h2 class="sec-h">六个观测维度</h2>
+    <p class="sec-sub">在线分析看板把上述方法拆成几个互补的视角，每个回答一个具体问题。</p>
+    <div class="grid g2">
+      <div class="card"><div class="ico">🧭</div><h3>主瓣方位与定向性</h3><p>把每条报文当成一个方位上的单位向量，按圆形统计累加。合向量的方向是主瓣指向，长度（0–1）是方向集中度。方位是圆形量，350° 与 10° 相邻，不能用算术平均——这一点在实现里特别处理过。</p></div>
+      <div class="card"><div class="ico">📐</div><h3>二维方向图（方位 × 仰角）</h3><p>方位（几何硬数据）作角向、仰角（模型估计）作径向，叠成极坐标热力图，颜色是报文密度。直观看出能量集中在低仰角（利远 DX）还是高仰角（利近距）。</p></div>
+      <div class="card"><div class="ico">📊</div><h3>逐波段辐射仰角</h3><p>每个波段辐射仰角的分布（中位、p10、p90），观察多波段天线在各波段是否都保持了低仰角能力。仰角为模型估计，作趋势参考。</p></div>
+      <div class="card"><div class="ico">⚡</div><h3>电离层跳距分布</h3><p>按距离分箱（地波 / 单跳 / 双跳 / 多跳），看能量在不同传播模式下的分布。对比 TX 与 RX 两个方向的远距离占比，可以观察收发是否对称。</p></div>
+      <div class="card"><div class="ico">🎯</div><h3>方向 × 波段弱点</h3><p>对同网格邻居逐（波段 × 方向）算 ΔSNR，排出系统性偏弱的组合。这是把"哪里该改进"落到具体方位和波段的核心视图。</p></div>
+      <div class="card"><div class="ico">🔇</div><h3>方向性噪声底限</h3><p>每个方位上能听到的最弱信号，反映本地噪声环境是否安静、有没有方向性噪声源。它解释了接收端的健康度。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 闭环 -->
+<section>
+  <div class="container narrow prose">
+    <div class="sec-tag">The Loop</div>
+    <h2 class="sec-h">从观测到改进的闭环</h2>
+    <p>这套方法真正的价值，不在于"分析完看个热闹"，而在于它能驱动真实的改造，并用同一把尺子量出改造有没有用。</p>
+    <div class="fig">
+<pre>① 理论/几何预测  ──→  ② 数据里的可观测特征
+                              │
+                              ▼
+                        ③ 用对应视图观测
+                              │
+                              ▼
+⑥ 改造后复测同一视图  ←──  ④ 找到偏弱的方向/波段
+   看 ΔSNR 是否改善         │
+        ▲                   ▼
+        └──────────  ⑤ 针对性改造（调向 / 加线 / 改高度）</pre>
+      <figcaption>改造前后跑同一组视图、对同一组邻居差分，ΔSNR 的变化就是改造效果的客观度量——传播和季节变量已被差分抵消。</figcaption>
+    </div>
+    <p>下一页用一副真实的天线（BG1SB 的 20m 端馈）完整走一遍这个闭环：先纯手算几何预测，再拉数据观测，看两者能不能对上，最后给出有数据支撑的改进方向。</p>
+    <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
+      <a href="case.html" class="btn btn-primary">看 BG1SB 实测案例 →</a>
+      <a href="http://radio.vlsc.net:5000/antenna" target="_blank" rel="noopener" class="btn btn-ghost">打开在线分析看板</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="index.html">首页</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能与讨论</a>
+      <a href="data.html">数据方法论</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 制作 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">方法基于 PSK Reporter 开放数据 · 方位为几何硬数据，仰角为模型估计 · 73！</p>
+  </div>
+</footer>
+
+</body>
+</html>

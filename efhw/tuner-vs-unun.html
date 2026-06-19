@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="EFHW 49:1 变压器 vs LC 调谐器对比试验（BG1SB, 15m/21.074MHz FT8, 100W）。用 PSK Reporter 同呼号配对 ΔSNR + 同网格探针扣除传播漂移的方法，记录一次顺序对比测试如何从'收报数量'的假象走向'无显著差异'的诚实结论。">
+<meta name="keywords" content="EFHW, 49:1, unun, LC tuner, LC 调谐器, 变压器, FT-240-51, PSK Reporter, ΔSNR, 天线效率, BG1SB, 配对比较">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>49:1 变压器 vs LC 调谐器：一次 15m 对比试验 | EFHW 知识体系</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="/efhw/" class="logo"><span>📡</span><span>EFHW 知识体系</span></a>
+    <div class="nav-links">
+      <a href="/efhw/">总览</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener">知识库 ↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="phead">
+  <div class="container narrow">
+    <div class="crumb"><a href="index.html">首页</a> / 实测案例 / 49:1 vs LC 调谐器</div>
+    <h1>49:1 变压器 vs LC 调谐器：一次 15m 对比试验</h1>
+    <p class="lead">同一副 20m 端馈天线，同一个频率（21.074 MHz FT8，100W），先用 49:1 变压器（3×FT-240-51）发一段，再切到 LC 调谐器发一段，用 PSK Reporter 的真实接收报文比较两者优劣。这份记录的价值不只在结论，更在于一次方法论的自我纠错——我们如何从"收报数量翻倍"的诱人假象，一步步退回到"在测量噪声内无法区分"的诚实结论。每个数字都可由文末列出的原始数据复算。</p>
+  </div>
+</header>
+
+<section class="first">
+  <div class="container narrow">
+
+    <div class="callout note">
+      <b>一句话结论：</b>本次数据<b>无法证明</b> LC 调谐器在 21 MHz 上优于 49:1 变压器。用同呼号配对 ΔSNR 并扣除同网格传播漂移后，两者天线效率的净差异约 <b>−0.3 ~ −0.75 dB</b>，完全落在 ±1 dB 测量噪声之内，<b>统计上不可区分</b>。这与"两者失配损耗仅差 0.09 dB"的理论完全自洽。
+    </div>
+
+    <div class="legend">
+      <span class="item"><span class="conf conf-measured">实测支持</span> 有本次测量数据支撑</span>
+      <span class="item"><span class="conf conf-derived">理论推导</span> 由物理计算得出</span>
+      <span class="item"><span class="conf conf-open">待验证</span> 受样本/方法所限，仍需复测</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- 1. 试验设置 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Setup</div>
+    <h2 class="sec-h">一、试验设置</h2>
+    <div class="prose">
+      <p>目标很简单：在不改变天线本体、馈线、频率和功率的前提下，只把"匹配方式"从 49:1 变压器换成 LC 调谐器，看远端收到的信号有没有可测量的差别。这是一次<b>顺序对比</b>——先 A 后 B，而非同时双发。</p>
+    </div>
+
+    <table class="spec">
+      <tr><th>项目</th><th>配置 A</th><th>配置 B</th></tr>
+      <tr><td>匹配方式</td><td>49:1 变压器</td><td>LC 调谐器</td></tr>
+      <tr><td>磁环 / 元件</td><td>3 × FT-240-51 堆叠</td><td>LC 网络（无磁芯）</td></tr>
+      <tr><td>实测 SWR @21.074</td><td>1.47</td><td>1.30</td></tr>
+      <tr><td>频率 / 模式</td><td colspan="2">21.074 MHz · FT8 · 100 W</td></tr>
+      <tr><td>电台 / 网格</td><td colspan="2">BG1SB · ON80（北京）</td></tr>
+      <tr><td>切换时刻</td><td colspan="2">2026-06-19 12:26:52 CST</td></tr>
+      <tr><td>分析窗口</td><td>11:35–12:26（51 min）</td><td>12:26–13:17（51 min）</td></tr>
+    </table>
+
+    <div class="callout note">
+      <b>为什么强调"顺序测"：</b>15m 传播逐分钟在变。先 A 后 B 的最大风险是——观测到的差异究竟来自<b>天线</b>，还是来自两段时间之间<b>电离层本身的漂移</b>？本文后面用"同网格探针台"来分离这两者，但顺序测的根本局限无法被完全消除。
+    </div>
+  </div>
+</section>
+
+<!-- 2. 方法演进 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">How the analysis evolved</div>
+    <h2 class="sec-h">二、三轮分析：一次方法论的自我纠错</h2>
+    <div class="prose">
+      <p>这次试验最有价值的部分，是分析口径的三次迭代。我们保留全部弯路，因为<b>被否定的结论和否定它的理由，本身就是最好的教材</b>。</p>
+    </div>
+
+    <h3 style="margin-top:28px">第 1 轮：比收报数量 → +2.6 dB <span class="conf conf-open">已否定</span></h3>
+    <div class="prose">
+      <p>最初的直觉是数"谁收到了我"。等长窗口下，B 段收报数、独立台站数、覆盖国家都明显多于 A 段，初步算出 LC 调谐器"等效 +2.6 dB、收报率约 2 倍"。</p>
+    </div>
+
+    <h3 style="margin-top:28px">第 2 轮：交叉验证发现传播在走弱 <span class="conf conf-measured">实测</span></h3>
+    <div class="prose">
+      <p>为排除"是不是下午传播变好抬高了 B"，引入同网格（ON80）、天线没动的其他电台作"传播探针"。结果发现两个全程活跃的探针 B/A 比值都小于 1（BH1UWJ=0.84、BI1WIA=0.42）——<b>大环境其实在走弱</b>。这一度<b>强化</b>了错误结论：传播在跌、唯独换天线的 BG1SB 在涨，看起来天线贡献更显著了。</p>
+    </div>
+
+    <h3 style="margin-top:28px">第 3 轮：同呼号配对 ΔSNR → 回到"无差异" <span class="conf conf-measured">实测</span></h3>
+    <div class="prose">
+      <p>转折点来自一个关键质疑：<b>收报数量没有意义，因为 A、B 两段我发射的次数本就不同。</b>发得越勤、解码窗口对得越齐，自然被收得越多，这跟天线增益无关。</p>
+      <p>正确的口径是<b>同一个接收呼号在 A、B 两段各自的平均 SNR 之差（ΔSNR）</b>。这是<b>配对比较</b>：每个接收台用它自己当对照，路径、距离、它的接收机灵敏度全部抵消。再用同网格探针的同口径 ΔSNR 扣掉电离层漂移，是两级对照。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 核心结果 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Result</div>
+    <h2 class="sec-h">三、配对 ΔSNR 核心结果</h2>
+    <p class="sec-sub">两套独立脚本（主线 paired_snr2.py 与分叉 paired_snr.py）对同一批数据各自计算，样本量略有差异，收敛到同一答案——这本身是一次有效的交叉验证。</p>
+
+    <table class="spec">
+      <tr><th>量</th><th>BG1SB（换了天线）</th><th>探针基准（天线没动）</th></tr>
+      <tr><td>共同呼号数 n</td><td>80 ~ 90</td><td>78（BH1UWJ 60 + BI1WIA 18）</td></tr>
+      <tr><td>ΔSNR 均值</td><td>−0.17 ~ −0.52 dB</td><td>+0.17 dB</td></tr>
+      <tr><td>ΔSNR 中位数</td><td>0.00 dB</td><td>+0.75 dB</td></tr>
+      <tr><td>标准差（个台）</td><td>≈5.5 dB</td><td>≈4–6 dB</td></tr>
+    </table>
+
+    <div class="prose">
+      <p>扣除传播后的<b>天线净效应 = ΔSNR(BG1SB) − ΔSNR(探针基准)</b>：</p>
+    </div>
+
+    <table class="spec">
+      <tr><th>口径</th><th>天线净效应</th><th>是否跨 0</th></tr>
+      <tr><td>按均值</td><td>−0.34 ~ −0.69 dB</td><td>跨 0（95%CI ≈ [−2.25, +0.88]）</td></tr>
+      <tr><td>按中位数</td><td>−0.75 dB</td><td>跨 0</td></tr>
+      <tr><td>按加权均值</td><td>−0.30 ~ −0.49 dB</td><td>跨 0</td></tr>
+    </table>
+
+    <div class="callout note">
+      <b>所有可信口径都跨越 0。</b>无论用均值、中位数还是加权均值，95% 置信区间都包含"零差异"。方向甚至略微为负，但量级远小于测量噪声，没有统计意义。
+    </div>
+  </div>
+</section>
+
+<!-- 4. 为什么数量法错 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Why counting failed</div>
+    <h2 class="sec-h">四、为什么"数量法"是假象，"ΔSNR 法"才对</h2>
+    <div class="prose">
+      <p><b>数量受两个与天线无关的因素污染：</b></p>
+      <ul>
+        <li><b>发射占空比差异</b>——A、B 两段实际发出的 FT8 帧数不同。发得多，被收得就多。</li>
+        <li><b>FT8 解码门限的选择效应</b>——FT8 在约 −24 dB 处有解码悬崖。信号在门限附近微小波动，就会让一批边缘台在"解得出/解不出"之间跳变，制造出收报数的大幅变化，却不代表真实场强变化。</li>
+      </ul>
+      <p>而 ΔSNR 是配对量：<b>同一个台</b>报告的 SNR 前后作差，把"这条路径、这个距离、这台接收机"的固定差异全部约掉，剩下的才更接近天线与传播的真实变化。再减去探针的传播漂移，剩下的才是天线。</p>
+    </div>
+
+    <div class="fig">
+<pre>
+  数量法（被污染）                  ΔSNR 配对法（干净）
+  ┌─────────────────┐            ┌─────────────────┐
+  │ 收报数 = f(天线,  │            │ 每台 ΔSNR =      │
+  │   发射次数,       │            │   meanB − meanA  │
+  │   解码门限选择)   │            │ → 台自身做对照    │
+  └─────────────────┘            └────────┬────────┘
+        ▲ 三者纠缠                          │ 减去探针 ΔSNR
+        │ 无法归因                          ▼
+        ✗                          ┌─────────────────┐
+                                   │ 天线净效应 ≈ 0   │
+                                   └─────────────────┘
+</pre>
+      <figcaption>数量把天线、发射次数、门限选择三者纠缠在一起无法归因；配对 ΔSNR 让每个台自比，再扣掉探针漂移，才隔离出天线。</figcaption>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 物理自洽 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Physics check</div>
+    <h2 class="sec-h">五、结论与物理是否自洽</h2>
+    <div class="prose">
+      <p>"无显著差异"这个结论，恰好和理论预期一致 <span class="conf conf-derived">理论推导</span>：</p>
+    </div>
+    <table class="spec">
+      <tr><th>SWR</th><th>反射功率</th><th>失配损耗</th></tr>
+      <tr><td>1.47（49:1）</td><td>≈3.6%</td><td>≈0.16 dB</td></tr>
+      <tr><td>1.30（LC）</td><td>≈1.7%</td><td>≈0.075 dB</td></tr>
+      <tr><td colspan="2"><b>两者之差</b></td><td><b>≈0.09 dB</b></td></tr>
+    </table>
+    <div class="prose">
+      <p>单从匹配好坏看，两者送到天线的功率几乎一样，差异远在测量噪声之下。3×FT-240-51 三磁环堆叠把磁通密度和铁损都压得很低，在 21 MHz 上插入损耗也不大。因此"两者实质相当"本就是符合物理的预期——第 1 轮那个 +2.6 dB 才是需要被解释掉的异常，而它的来源已经查明：发射占空比 + 解码门限。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 限制 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Limitations</div>
+    <h2 class="sec-h">六、必须诚实标注的限制</h2>
+    <div class="prose">
+      <ul>
+        <li><b>仍是顺序测，非同时。</b><span class="conf conf-open">待验证</span> 交叉探针把传播污染压得很低，但没归零。</li>
+        <li><b>单次报告噪声大。</b> 多数共同呼号在 A/B 各只有 1–2 次报告，而 FT8 单次 SNR 自带 ±2–3 dB 抖动。个台 ΔSNR 标准差 5.5 dB 主要是这个噪声，靠 n≈80–90 聚合才有意义。</li>
+        <li><b>过滤后样本塌缩。</b> 要求"A、B 各至少 2 次报告"时，DUT 共同呼号从 80 骤降到 3；要求 3 次则只剩 1。短窗口顺序测无法同时满足"去噪"和"样本量"。</li>
+        <li><b>有效探针仅 2 个</b>（BH1UWJ、BI1WIA），且方向相反（+0.75 / −1.78），基准本身有约 ±1 dB 不确定性。理想需要 4–5 个全程活跃探针。</li>
+      </ul>
+    </div>
+
+    <table class="spec">
+      <tr><th>过滤门限</th><th>DUT 共同呼号 n</th><th>天线效应(中位)</th><th>可信度</th></tr>
+      <tr><td>≥1 次报告</td><td>80–90</td><td>−0.75 dB</td><td>样本足，单次噪声大</td></tr>
+      <tr><td>≥2 次报告</td><td>3</td><td>+1.00 dB</td><td>样本塌缩，不可信</td></tr>
+      <tr><td>≥3 次报告</td><td>1</td><td>—</td><td>无法分析</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 7. 下一步 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Next steps</div>
+    <h2 class="sec-h">七、进一步论证建议</h2>
+    <div class="prose">
+      <p>单次顺序测的噪声地板就在 ±1–2 dB，再怎么后期分析也突破不了。要测出更小的真实差异，必须从<b>采集端</b>改进。按性价比排序：</p>
+    </div>
+
+    <div class="map-step">
+      <div class="mn">1</div>
+      <div class="mb">
+        <h4>磁环温度实测（首选，5 分钟）</h4>
+        <p>100 W 连发 10 分钟后摸 3×FT-240-51。不烫 = 铁损可忽略，直接物理坐实"两者相当"。这是<b>唯一不受任何传播噪声干扰</b>的单点测量，最高性价比。</p>
+        <span class="tag">不受传播影响 · 直接证伪/证实变压器损耗</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">2</div>
+      <div class="mb">
+        <h4>A/B/A/B 交替快切</h4>
+        <p>每段 3–4 分钟，切 6–8 轮，配合同呼号 ΔSNR + 探针扣除法逐轮累计。让传播漂移在轮次间相互抵消，并把每个共同呼号的多次配对用 √N 压低单次噪声。能把噪声地板从 ±1 dB 压到可分辨 ±0.5 dB。</p>
+        <span class="tag">消除传播漂移 · 工作量较大</span>
+      </div>
+    </div>
+    <div class="map-step">
+      <div class="mn">3</div>
+      <div class="mb">
+        <h4>扩展探针 + 多波段</h4>
+        <p>纳入 4–5 个全程活跃的同网格探针收紧传播基准；并在 40m/20m/10m 重复——若变压器铁损是主因，差异应随频率升高而放大，这能给出一条可证伪的趋势线。</p>
+        <span class="tag">收紧基准 · 频率趋势可证伪</span>
+      </div>
+    </div>
+
+    <div class="callout note">
+      <b>方法论收获（最值得带走的一条）：</b>在用 PSK Reporter 评估天线改动时，<b>收报数量不可用作性能指标</b>——它被发射占空比和 FT8 解码门限严重污染。<b>同呼号配对 ΔSNR + 同网格探针扣除</b>才是正确口径。即便如此，单次顺序测仍受 ±1 dB 噪声限制，小于此的差异需靠交替快切 + 多次配对累计才能显现。
+    </div>
+  </div>
+</section>
+
+<!-- 8. 数据可追溯 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Reproducibility</div>
+    <h2 class="sec-h">八、原始数据与可复算性</h2>
+    <div class="prose">
+      <p>本页所有数字均可由以下原始数据与脚本复算，全部已提交至开源知识库：</p>
+    </div>
+    <table class="spec">
+      <tr><th>类别</th><th>文件</th><th>用途</th></tr>
+      <tr><td>原始报文</td><td>pskr_24h_latest.adi</td><td>BG1SB 24h 收报 ADIF（含 A/B 两段）</td></tr>
+      <tr><td>探针报文</td><td>probe_BH1UWJ / BI1WIA / BD1AUJ / BI1MDW / BI1KND.adi</td><td>同网格传播基准</td></tr>
+      <tr><td>配对分析</td><td>paired_snr.py · paired_snr2.py</td><td>同呼号 ΔSNR + 探针扣除（含 ≥1/2/3 过滤）</td></tr>
+      <tr><td>数量分析</td><td>cross_full.py · adif_compare.py</td><td>第 1–2 轮收报数量法（已否定，留档）</td></tr>
+      <tr><td>试验日志</td><td>efhw_test_log.json</td><td>切换时刻、SWR 标记、窗口快照</td></tr>
+    </table>
+    <div class="callout note">
+      关键参数：切换点 <b>2026-06-19 12:26:52 CST</b> · 等长窗口各 <b>51 min</b> · 频段过滤 <b>21.0–21.5 MHz FT8</b> · ADIF 时间按 <b>UTC→CST(+8)</b> 转换（早期一处时区 bug 已修复）。
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="/efhw/">总览</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener">知识库 ↗</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 整理 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">本次为 2026-06-19 的一次阶段性对比试验 · 结论受样本与方法所限，会随复测修订 · 73！</p>
+  </div>
+</footer>
+
+</body>
+</html>

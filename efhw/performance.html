@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="EFHW 端馈半波天线的真实性能与边界 — 49:1 变压器在各波段的效率、TX/RX 平衡、多波段方向图、奇次谐波(15m)的讨论。以社区实测与理论推导为依据，谦逊陈述已知与未知。BG1SB / www.vlsc.net">
+<meta name="keywords" content="EFHW 性能, 49:1 效率, TX RX 分离, 多波段方向图, 15m 谐波, NEC 建模, ON6URE, PA9X, N6CC">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>真实性能与边界 · EFHW 知识体系 | www.vlsc.net</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="index.html" class="logo"><span>📡</span><span>EFHW</span></a>
+    <div class="nav-links">
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html" class="active">性能与边界</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+      <a href="https://www.vlsc.net/">vlsc.net</a>
+    </div>
+  </div>
+</nav>
+
+<header class="phead">
+  <div class="container narrow">
+    <div class="crumb"><a href="index.html">EFHW 知识体系</a> / 真实性能与边界</div>
+    <h1>真实性能与边界</h1>
+    <p class="lead">EFHW 简单、便携、一线多波段，这些是它受欢迎的真实优点。但任何天线都有边界，社区里也存在不同声音。这一页把这些观点按其依据如实呈现——是社区实测就标实测，是理论推导就标推导，是尚待验证的观察就坦诚说还需验证。我们不替谁下定论，只把证据摆清楚，留给读者判断。</p>
+  </div>
+</header>
+
+<!-- 证据强度说明 -->
+<section class="first">
+  <div class="container narrow">
+    <div class="sec-tag">How to read this page</div>
+    <h2 class="sec-h">先说清楚：每条结论的依据强度</h2>
+    <p class="sec-sub">本页（以及全站）对每条陈述标注其依据来源。这不是为了显得严谨，而是因为它们的可信程度本就不同，混为一谈会误导人。</p>
+    <div class="legend">
+      <span class="item"><span class="conf conf-measured">实测</span> 有仪器或大样本数据支撑</span>
+      <span class="item"><span class="conf conf-derived">推导</span> 由物理与几何计算得出</span>
+      <span class="item"><span class="conf conf-open">待验证</span> 阶段性观察或社区共识，尚需更多数据</span>
+    </div>
+    <div class="callout note">
+      <b>一个前提：</b>天线性能高度依赖具体安装——高度、走向、地形、馈线、电磁环境。同一副 EFHW 在不同人手里表现可以差很多。所以下面任何"性能数字"都应理解为<b>特定条件下的观察</b>，而非这种天线的固有属性。要知道你自己那根的表现，最好的办法是测它（见<a href="data.html">数据方法</a>与<a href="case.html">实测案例</a>）。
+    </div>
+  </div>
+</section>
+
+<!-- 49:1 效率 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Efficiency</div>
+    <h2 class="sec-h">49:1 变压器的效率与波段差异</h2>
+    <div class="prose">
+      <p>49:1 宽带变压器用一个铁氧体磁环把 50Ω 变换到约 2450Ω，免调谐、即插即用，这是它最大的便利。代价是它并非在所有波段都同样高效。</p>
+
+      <h4>社区实测观察到的趋势 <span class="conf conf-open">待验证 / 因芯而异</span></h4>
+      <p>比利时业余无线电爱好者 ON6URE 等人用 VNA 对 49:1 变压器做过扫描，报告了一个被不少人复现的趋势：</p>
+      <ul>
+        <li><b>低波段（80m）</b>：磁环在低频需要足够的磁导率与匝数，若磁芯偏小，励磁电流偏大、损耗上升，效率可能下降。</li>
+        <li><b>中波段（40m–20m）</b>：通常是 49:1 EFHW 工作最舒服的区间。</li>
+        <li><b>高波段（10m 附近）</b>：磁芯的高频损耗和漏感增大，匹配可能变差，部分人观察到驻波抬升或效率下降。</li>
+      </ul>
+      <p>需要诚实说明的是：这些数字（例如某些资料给出的"辐射效率 60–75%"）<b>因磁芯型号、绕法、补偿电容、功率水平而显著不同</b>，并不是一个适用于所有 49:1 变压器的固定值。把它当成"这一类设计在某些条件下可能出现的现象"来理解更合适。</p>
+
+      <h4>由物理推导能确定的部分 <span class="conf conf-derived">推导</span></h4>
+      <p>初级 2 匝紧耦合、跨接 100–150pF 补偿电容，确实能在 10/15m 改善匹配——这有清楚的漏感补偿原理支撑（见<a href="build.html#transformer">制作页</a>）。这部分是可推导、可复现的工程手段，不依赖具体环境。</p>
+
+      <div class="callout">
+        <b>怎么知道你自己那根的效率？</b> PSKReporter 数据给不出绝对效率百分比，但能给出一个非常有用的相对量：把你的信号和<b>同网格邻居</b>在同一时段、同一波段、同一方向的接收报告做差（ΔSNR）。这剥离了传播因素，剩下的差异主要来自天线与馈线。详见<a href="data.html">数据方法</a>。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TX/RX -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">TX / RX Balance</div>
+    <h2 class="sec-h">"被听到，却听不到回复"——TX/RX 平衡的讨论</h2>
+    <div class="prose">
+      <p>荷兰业余无线电爱好者 PA9X 提出过一个很多 EFHW 用户有共鸣的观察：EFHW 发射端表现往往不错，但在<b>人为噪声（QRM）较强的城市环境</b>下，接收容易被本地噪声淹没，于是出现"我能被远方听到，却听不到对方回复"的挫折感。他的建议是 TX 继续用 EFHW，RX 改用有方向性零点的有源磁环天线来压噪。</p>
+
+      <h4>这个观点的依据与边界 <span class="conf conf-open">社区共识 · 取决于环境</span></h4>
+      <p>它的物理机理是清楚的：EFHW 是电场耦合较强的天线，对近场电气噪声敏感；磁环的尖锐零点可以对准噪声源削弱干扰。这部分推导成立。</p>
+      <p>但要强调的是，它的<b>前提是"高 QRM 环境"</b>。这个前提是否成立，因站点而异——城市公寓和半郊区独栋的噪声环境可能差很多。所以"EFHW 一定是 RX 瓶颈"并不是一条普适结论，而是<b>一个需要在你自己站点验证的假设</b>。</p>
+
+      <div class="callout note">
+        <b>可以这样检验：</b> 把你作为发射方被远台听到的覆盖范围，和你作为接收方能听到的远台范围做对比（PSKReporter 的 TX/RX 双向数据正好能做这件事）。如果两者接近，说明你的接收并没有明显拖后腿，未必需要额外的接收天线；如果接收明显偏弱，再考虑磁环也不迟。在投入硬件之前先用数据看一眼，能少走弯路。详见<a href="data.html">数据方法</a>。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 多波段方向图 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Multi-band Patterns</div>
+    <h2 class="sec-h">多波段：同一根线，在不同波段是"不同的天线"</h2>
+    <div class="prose">
+      <p>美国业余无线电爱好者 N6CC 等人用 NEC 建模指出：一根 EFHW 在它的各个谐波波段上，电长度不同，因此<b>方向图也不同</b>——在 40m 是简单的双瓣，到了 10m（约 2λ）会裂成多个波瓣，主瓣方向、仰角都会变化。这是天线理论里很自然的结果。</p>
+
+      <h4>这点的可信度 <span class="conf conf-derived">推导 · 与观测一致</span></h4>
+      <p>"波瓣随频率增多、方向图随波段变化"是由电长度直接推导的，几乎没有争议。一个常被讨论的具体情形是 <b>15m</b>：对一根 40m 基波的线，15m 处约为 1.41λ，既不是干净的半波整数倍，方向图会比较破碎、零点较多。</p>
+      <p>需要谨慎区分两种说法：</p>
+      <ul>
+        <li><b>"主瓣方向随波段大幅漂移"</b>——这要看具体天线。对一副以水平为主的导线，各波段的主瓣大方向（broadside）其实可能相当一致，漂移主要发生在副瓣和零点结构上。这一点适合用实测来看，不宜一概而论。</li>
+        <li><b>"破碎的方向图一定更差"</b>——不尽然。多波瓣意味着覆盖的方位更分散，对追求多方向、多 DXCC 实体的玩法，未必是坏事。</li>
+      </ul>
+      <div class="callout">
+        <b>用数据看你自己的方向图：</b> 把每条接收报告按方位累加，可以反推出各波段的主瓣方向与方向集中度，直观看到"在你这根天线上，各波段到底一致还是分散"。<a href="case.html">实测案例</a>里有一个真实站点的完整结果。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AA5TB 窄带高效 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">A Different Path</div>
+    <h2 class="sec-h">另一条路：AA5TB 的窄带 LC 耦合器</h2>
+    <div class="prose">
+      <p>在宽带 49:1 变压器流行之前，Steve Yates (AA5TB) 系统研究过另一种匹配方式：并联 LC 谐振 + 链路耦合的<b>窄带耦合器</b>。它需要每个波段手动调谐，换来的是更高的效率和天然的谐波抑制。</p>
+      <p>AA5TB 的一个 40m–17m 小型耦合器实测插入损耗 <b>小于 0.5 dB</b>（约 89% 效率）<span class="conf conf-measured">实测</span>，这是窄带方案高效率的一个直接证据。他也提出了"台架电阻预标定 + 现场只调线长"的调谐方法，以及 0.05λ counterpoise 这一被广泛引用的经验值。</p>
+      <p>这并不意味着窄带一定优于宽带——两者是不同取舍：</p>
+      <table class="spec plain">
+        <tr><th>维度</th><th>窄带 LC 耦合器</th><th>宽带 49:1 变压器</th></tr>
+        <tr><td>效率</td><td>较高（每波段调谐）</td><td>中等，因波段而异</td></tr>
+        <tr><td>谐波抑制</td><td>有（LC 滤波）</td><td>无</td></tr>
+        <tr><td>操作</td><td>每次换段需调谐</td><td>即插即用</td></tr>
+        <tr><td>适合场景</td><td>固定频段、QRP、数字模式</td><td>多波段快速切换、SSB/CW</td></tr>
+      </table>
+      <p>选哪条路，取决于你的操作习惯。这里把两种方案如实并列，不预设优劣。更完整的对照见 <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener">efhw-knowledge</a> 知识库中的 AA5TB 专项分析。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 小结 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Summary</div>
+    <h2 class="sec-h">小结：把"边界"说清楚，是为了用好它</h2>
+    <div class="prose">
+      <p>EFHW 是一副优点很实在的天线：简单、便宜、便携、一线多波段。它的边界——某些波段效率打折、对环境噪声敏感、高波段方向图复杂——大多有清楚的物理解释，也大多可以通过设计与安装去缓解。</p>
+      <p>更重要的是：这些"性能"不是抽象的，而是关于<b>你自己那根天线</b>的具体问题。与其在论坛上争论"EFHW 到底好不好"，不如用数据看一眼你这副在你的环境里的真实表现。这正是下一部分要讲的。</p>
+      <div class="hero-btns" style="justify-content:flex-start;margin-top:8px">
+        <a href="data.html" class="btn btn-primary">→ 数据方法：怎么测自己的天线</a>
+        <a href="case.html" class="btn btn-ghost">看一个真实案例</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="index.html">首页</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能与边界</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 制作 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">本页观点均注明依据来源 · 尊重每一位原作者的贡献 · 73！</p>
+  </div>
+</footer>
+
+</body>
+</html>

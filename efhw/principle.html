@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="EFHW 端馈半波天线工作原理 — 半波末端高阻、49:1 阻抗变换、谐波多波段机制、counterpoise 与共模电流。从物理出发理解端馈半波天线。">
+<meta name="keywords" content="EFHW, 端馈半波天线, 工作原理, 半波长, 高阻抗, 谐波谐振, counterpoise, 共模电流, 业余无线电">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>工作原理 — EFHW 端馈半波天线知识体系 | www.vlsc.net</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="index.html" class="logo"><span>📡</span><span>EFHW</span></a>
+    <div class="nav-links">
+      <a href="principle.html" class="active">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能与讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+      <a href="https://www.vlsc.net/">vlsc.net</a>
+    </div>
+  </div>
+</nav>
+
+<header class="phead">
+  <div class="container narrow">
+    <div class="crumb"><a href="index.html">首页</a> / 工作原理</div>
+    <h1>工作原理</h1>
+    <p class="lead">理解这几点，端馈半波天线的行为就不再是黑箱——调试时能预判，遇到问题时能定位。这一页只讲物理，不下结论。</p>
+  </div>
+</header>
+
+<section class="first">
+  <div class="container narrow">
+    <div class="sec-tag">Fundamentals</div>
+    <h2 class="sec-h">四个核心物理点</h2>
+    <p class="sec-sub">从"为什么能在末端馈电"到"为什么需要一点地"，这四点构成了 EFHW 的物理骨架。</p>
+
+    <div class="prin">
+      <div class="num">1</div>
+      <div class="body">
+        <h4>半波长的末端是高阻抗点</h4>
+        <p>半波长导线上，电流与电压沿线呈驻波分布。中心是电流波腹、电压波节，阻抗低（约 50–70Ω，这正是偶极子从中心馈电的原因）；而<b>两端</b>是电压波腹、电流波节，呈现很高的阻抗。</p>
+        <p>实测与建模文献给出的末端阻抗通常落在 <span class="hl">约 2000–5000Ω</span> 区间，具体值取决于架设高度、地面与周围环境。EFHW 正是从这个高阻末端馈电。</p>
+      </div>
+    </div>
+
+    <div class="prin">
+      <div class="num">2</div>
+      <div class="body">
+        <h4>需要一次阻抗变换：典型 49:1</h4>
+        <p>电台输出阻抗是 50Ω，而天线末端约 2450Ω，两者相差约 49 倍。用一个 <span class="hl">49:1 阻抗变换器（unun）</span>把 50Ω 抬到约 2450Ω。因为阻抗比等于匝数比的平方，49 = 7²，所以变压器的<b>匝数比是 7:1</b>。</p>
+        <p>49:1 是一个常用的近似匹配点而非唯一解——末端实际阻抗随安装条件变化，所以不同环境下 6:1、8:1 等比值也各有适用场景（详见<a href="performance.html">性能与讨论</a>）。</p>
+      </div>
+    </div>
+
+    <div class="prin">
+      <div class="num">3</div>
+      <div class="body">
+        <h4>谐波谐振带来多波段能力</h4>
+        <p>一根对 40m 为半波长（λ/2）的线，对 20m 约为整波长（1λ）、对 15m 约 1.5λ、对 10m 约 2λ。在这些整数与半整数倍处，末端<b>同样呈现高阻</b>，于是同一根线配同一个变换器能在多个谐波波段工作。</p>
+        <p>需要说明的是：不同波段末端阻抗并不完全相等，方向图也不同（见第 5 节）。多波段能力是"可用"，而非"每个波段都和基波一样理想"。</p>
+      </div>
+    </div>
+
+    <div class="prin">
+      <div class="num">4</div>
+      <div class="body">
+        <h4>需要一条可控的反向电流路径</h4>
+        <p>EFHW 并非完全不需要参考地。馈电端需要一小段<b>反向电流路径</b>来稳定方向图、抑制馈线外皮辐射，常见做法是约 0.05λ 的短 counterpoise，或在馈线上加共模扼流圈。</p>
+        <p>AA5TB 的建模指出，即使不刻意设置 counterpoise，同轴外皮、电台外壳、操作员人体电容也会充当"事实上的 counterpoise"。问题不在于"要不要"，而在于这条路径是否<b>可控</b>。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Standing Wave</div>
+    <h2 class="sec-h">沿线的电流与电压分布</h2>
+    <p class="sec-sub">一张图说清为什么末端是高阻、中心是低阻。</p>
+    <figure class="fig">
+<pre>
+   电流 I  ┌─────●─────┐         ● = 波腹(最大)
+          │   ╱   ╲   │         ○ = 波节(最小)
+   ───────○───────────○───────  导线
+          末端       中心      末端
+   电压 V  ●           ○         ●
+          高阻         低阻       高阻
+       (EFHW 馈电)  (偶极子馈电) (EFHW 馈电)
+</pre>
+      <figcaption>半波长导线上，电流在中心最大、两端最小；电压相反。末端电压高、电流小 → 高阻抗。</figcaption>
+    </figure>
+    <div class="callout">
+      <b>一句话记忆：</b> 中心馈电是偶极子（低阻、50Ω 直配），末端馈电是 EFHW（高阻、需 49:1 变换）。两者是同一根半波长导线的两种馈电方式。
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Multiband</div>
+    <h2 class="sec-h">谐波多波段：一根线覆盖多个频段</h2>
+    <p class="sec-sub">以 40m（约 7.1 MHz）为基波裁剪的一根线，在各波段的电长度大致如下。</p>
+    <table class="spec">
+      <tr><th>波段</th><th>频率</th><th>电长度</th><th>末端阻抗与方向图</th></tr>
+      <tr><td>40m</td><td>7.1 MHz</td><td>约 0.5λ</td><td>基波半波，方向图规整，EFHW 设计点</td></tr>
+      <tr><td>20m</td><td>14.1 MHz</td><td>约 1.0λ</td><td>整波长，低仰角双瓣，末端仍高阻</td></tr>
+      <tr><td>15m</td><td>21.1 MHz</td><td>约 1.4λ</td><td>非整数倍，阻抗与方向图偏离理想，多副瓣</td></tr>
+      <tr><td>10m</td><td>28.2 MHz</td><td>约 1.9λ</td><td>接近 2 倍半波，方向图较规整</td></tr>
+    </table>
+    <div class="callout note">
+      <b>这是一个可检验的预测：</b> 整数/半整数倍波段（40/20/10m）方向图较规整，而 1.4λ 这类非整数倍波段（如 15m）方向图更复杂、副瓣更多。<a href="case.html">实测案例</a>页用 BG1SB 自己天线的数据检验了这一点。
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container narrow">
+    <div class="prose">
+      <h3>延伸阅读</h3>
+      <p>本页讲的是物理骨架。要把它变成一根真实可用的天线，继续看：</p>
+      <ul>
+        <li><a href="build.html">制作指南</a> — 49:1 变压器怎么绕、线长怎么算、七步架设。</li>
+        <li><a href="performance.html">性能与讨论</a> — 49:1 vs 64:1、多波段的代价、TX/RX 的不同角色，以及哪些仍是开放问题。</li>
+        <li><a href="data.html">数据方法</a> — 怎样用 PSK Reporter 报文检验上面这些原理预测。</li>
+      </ul>
+      <p>本页内容综合自 AA5TB、社区文献与基础天线理论，是 <a href="https://github.com/cheenle/efhw-knowledge" target="_blank" rel="noopener">efhw-knowledge</a> 知识库第 1、4、5 节的网页版整理。</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="index.html">首页</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能与讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">调谐器对比</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 整理 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">内容综合自公开文献与本台实测 · 欢迎指正 · 73！</p>
+  </div>
+</footer>
+
+</body>
+</html>

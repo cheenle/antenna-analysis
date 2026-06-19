@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="BG1SB 20m 端馈半波天线实测案例 — 从安装几何推导方向图预测，用 PSK Reporter 十万条接收报文对照检验，并与 DXCC 实通联记录交叉印证。一份可复现的天线观测方法演示。">
+<meta name="keywords" content="EFHW, BG1SB, PSK Reporter, 天线方向图, 实测, DXCC, 端馈半波, 案例研究">
+<meta name="author" content="BG1SB">
+<meta name="theme-color" content="#0d1117">
+<title>BG1SB 实测案例 — 几何预测 × 大数据观测 × DXCC 交叉印证 | EFHW 知识体系</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%25' text-anchor='middle' font-size='55'>📡</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a href="index.html" class="logo"><span>📡</span><span>EFHW 知识体系</span></a>
+    <div class="nav-links">
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html" class="active">实测案例</a>
+      <a href="tuner-vs-unun.html">对比试验</a>
+      <a href="https://www.vlsc.net/">vlsc.net</a>
+    </div>
+  </div>
+</nav>
+
+<header class="phead">
+  <div class="container narrow">
+    <div class="crumb"><a href="index.html">首页</a> / 实测案例</div>
+    <h1>一根 20m 端馈线的故事：从几何推导到大数据对照</h1>
+    <p class="lead">这是一份把前面所有方法落到一副真实天线上的完整演示。我们先只凭安装尺寸，用纸笔推出方向图应当长什么样；再去 PSK Reporter 的十万条接收报文里看实际观测；最后用 DXCC 实通联记录做第三方交叉印证。全程标注每个结论的依据强度，能确证的说确证，属推导的说推导，未定的坦白说未定。</p>
+  </div>
+</header>
+
+<!-- 证据强度说明 -->
+<section class="first">
+  <div class="container narrow">
+    <div class="callout note">
+      <b>关于本文的措辞</b><br>
+      本文是一次开放的观测记录，不是定论。所有判断按依据强度分三档标注，请据此理解每条结论的可信程度：
+      <div class="legend" style="margin-top:12px">
+        <span class="item"><span class="conf conf-measured">实测一致</span> 观测数据与预测吻合，可信度较高</span>
+        <span class="item"><span class="conf conf-derived">理论推导</span> 由物理/几何推出，尚待更多观测</span>
+        <span class="item"><span class="conf conf-open">阶段观察</span> 初步现象，样本或方法有限，留待验证</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 天线条件 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">The Antenna</div>
+    <h2 class="sec-h">这副天线长什么样</h2>
+    <div class="prose">
+      <p>站点 <b>BG1SB</b>，网格 <code>ON80da</code>（北京，40.02°N / 116.29°E）。一副 20m 长的端馈半波天线：</p>
+      <table class="spec plain">
+        <tr><th>参数</th><th>数值</th><th>说明</th></tr>
+        <tr><td>导线长度</td><td>20 m</td><td>基波对应 40m 波段</td></tr>
+        <tr><td>馈电点高度</td><td>12 m</td><td>6 层楼之第 4 层窗台</td></tr>
+        <tr><td>远端高度</td><td>3.5 m</td><td>树梢</td></tr>
+        <tr><td>朝向</td><td>南偏西 20°</td><td>馈电点 → 远端，即方位轴 20°↔200°</td></tr>
+      </table>
+      <p>这是一副高端馈电、向下倾斜的 sloper。下面所有预测，都只用到这四个数字。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 第一步：几何推导 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Step 1 · 只用纸笔</div>
+    <h2 class="sec-h">先推导：方向图应该长什么样 <span class="conf conf-derived">理论推导</span></h2>
+    <div class="prose">
+      <p>在看任何数据之前，先把安装几何变成可检验的预测。这一步刻意不碰数据——如果后面的观测能对上这些纯手算的预测，才说明数据真的在"看见"这副天线。</p>
+
+      <h3>基本尺寸推导</h3>
+      <table class="spec">
+        <tr><th>量</th><th>结果</th><th>怎么算的</th></tr>
+        <tr><td>坡度角</td><td>≈25.2°</td><td>arcsin((12−3.5)/20)</td></tr>
+        <tr><td>水平投影</td><td>≈18.1 m</td><td>20·cos(25.2°)</td></tr>
+        <tr><td>电流腹点高度</td><td>≈7.8 m</td><td>半波中点 (12+3.5)/2</td></tr>
+        <tr><td>导线方位轴</td><td>20° ↔ 200°</td><td>馈电点→远端 = 南偏西 20°</td></tr>
+      </table>
+
+      <h3>方向图的几何预测</h3>
+      <p>对一副以水平为主（倾角约 25°）的半波导线，水平面方向图是垂直于导线的"8 字"形：</p>
+      <figure class="fig">
+<pre>            N (20° 轴向零点)
+                ╲   ╱
+   主瓣 ←  ESE 110° ●━━━━━● WNW 290° → 主瓣
+                ╱   ╲       (此侧有楼体)
+            S (200° 轴向零点)
+                  导线轴 20°–200°</pre>
+        <figcaption>半波导线的横向（broadside）双瓣方向图，主瓣垂直于导线轴，零点沿导线轴</figcaption>
+      </figure>
+      <table class="spec">
+        <tr><th>预测项</th><th>方位</th><th>物理依据</th></tr>
+        <tr><td>主瓣（broadside）</td><td>110° ESE 与 290° WNW</td><td>垂直于 20°–200° 导线轴</td></tr>
+        <tr><td>轴向零点（null）</td><td>20° NNE 与 200° SSW</td><td>沿导线方向辐射相消</td></tr>
+        <tr><td>主瓣偏向</td><td>预计偏 110° ESE</td><td>4 层之上还有楼体，预计压制 290° WNW 侧；下坡侧（200°方向）开阔</td></tr>
+        <tr><td>辐射仰角</td><td>中低角（约 10–15°）</td><td>电流腹点约 7.8m，下倾 sloper 倾向拉低主瓣仰角</td></tr>
+      </table>
+      <div class="callout">
+        <b>一个需要事先讲明的混淆因素</b><br>
+        预测主瓣方位 110° ESE，恰好也是北京看日本（约 100°）、东南亚、太平洋的大圆方向。这意味着"天线的几何偏好"与"这些方向接收台密集"会叠加在一起。单看报文数量无法把两者分开——后面会专门用对照方法来处理这个问题（见"如何看待日本方向"一节）。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 第二步：数据观测 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Step 2 · 看观测</div>
+    <h2 class="sec-h">再观测：数据怎么说</h2>
+    <div class="prose">
+      <p>数据来自 PSK Reporter <code>all_records</code>。2025 年为全年完整数据（各主力波段 6 万+ 样本），作为可信基线；2026 年截至 6 月样本较薄，仅作趋势参考。</p>
+
+      <h3>主瓣方位 — lobe_drift <span class="conf conf-measured">实测一致</span></h3>
+      <p>把每条报文当作一个方位上的单位向量，按报文数加权做圆形平均，得到各波段的主瓣方位与方向集中度 R。</p>
+      <table class="spec">
+        <tr><th>波段</th><th>主瓣方位</th><th>峰值桶</th><th>集中度 R</th><th>样本</th></tr>
+        <tr><td>40m</td><td>102.5° ESE</td><td>90°</td><td>0.51</td><td>63,698</td></tr>
+        <tr><td>20m</td><td>99.9° E</td><td>90°</td><td>0.49</td><td>15,658</td></tr>
+        <tr><td>15m</td><td>106.1° ESE</td><td>90°</td><td>0.63</td><td>60,467</td></tr>
+        <tr><td colspan="5" style="color:var(--green)">跨波段离散仅约 6°，各波段峰值统一在 90° 桶</td></tr>
+      </table>
+      <p>预测主瓣 110° ESE，实测各波段主瓣落在 97–106°、峰值统一在 90° 桶，与预测相差约 13° 以内。主瓣偏向 ESE 一侧（而非 WNW 290°），与"该侧有楼体、下坡侧开阔"的预测方向一致。这是一次预测与观测较好吻合的例子。</p>
+
+      <h3>与邻居的方向差异 — weak_spots <span class="conf conf-measured">实测一致</span></h3>
+      <p>这是本案例最关键的一组观测。方法是取同一 ON80 网格、同一时段的其他台站作基准，计算本台与邻居的 SNR 差（ΔSNR）。由于邻居面对相同的传播条件和相同的接收台分布，这个差分剥离了传播与人口密度的影响，剩下的主要反映天线与环境的差异。</p>
+      <table class="spec">
+        <tr><th>波段 · 方向</th><th>ΔSNR</th><th>样本(本台/邻)</th><th>几何上的可能解释</th></tr>
+        <tr><td>15m · 240° SW</td><td>−5.4 dB</td><td>168 / 70</td><td>200° 轴向零点邻区</td></tr>
+        <tr><td>12m · 300° NW</td><td>−4.8 dB</td><td>248 / 630</td><td>WNW broadside 背面（楼体侧）</td></tr>
+        <tr><td>15m · 210° SW</td><td>−4.1 dB</td><td>2148 / 359</td><td>200° 轴向零点邻区</td></tr>
+        <tr><td>15m · 0° N</td><td>−3.6 dB</td><td>308 / 64</td><td>20° 轴向零点邻区</td></tr>
+        <tr><td>20m · 300° NW</td><td>−2.8 dB</td><td>2150 / 5139</td><td>楼体遮挡侧</td></tr>
+      </table>
+      <p>这里出现了一个值得注意的现象：两个<b>互相独立的物理机制</b>，分别对应到两组<b>不同方位</b>的观测偏低区，而且都落在几何预测的位置附近——</p>
+      <figure class="fig">
+<pre>机制 ① 导线轴向零点（纯天线几何）
+   预测零点：200° SSW 与 20° NNE
+   观测偏低：210° SW、240° SW、0° N
+   → 落在 200°/20° 零点的相邻扇区
+
+机制 ② 楼体遮挡（安装环境）
+   预测：290° WNW 一侧主瓣受楼体压制
+   观测偏低：300° NW（12m、20m）
+   → 落在 WNW broadside 背面</pre>
+        <figcaption>两条独立的纸笔预测，各自对应一组观测到的方向性偏低区</figcaption>
+      </figure>
+      <p>两条独立预测各自对应一组观测缺口，这种一致性较难单纯由偶然解释，是本案例中预测与数据闭合得最好的部分。</p>
+
+      <h3>主力波段相对表现 — tx_quality <span class="conf conf-measured">实测一致</span></h3>
+      <table class="spec">
+        <tr><th>波段</th><th>本台均值</th><th>邻居均值</th><th>Δ</th><th>说明</th></tr>
+        <tr><td>40m</td><td>−6.1</td><td>−7.2</td><td>+1.1 dB</td><td>基波半波，略优于邻居均值</td></tr>
+        <tr><td>20m</td><td>−10.1</td><td>−13.1</td><td>+3.0 dB</td><td>全波，略优于邻居均值</td></tr>
+        <tr><td>80m</td><td>−9.9</td><td>−5.4</td><td>−4.5 dB</td><td>20m 线在 80m 仅约 0.24λ，偏弱属预期</td></tr>
+      </table>
+      <p>在主力波段（40m、20m），本台相对同网格邻居的均值并不落后，反而略高。需要说明的是：PSK Reporter 衡量的是<b>相对邻居</b>的表现，而非绝对辐射效率——它不能给出"效率百分之多少"这样的绝对数字，只能说明这副天线在同类站点中没有表现出明显的系统性偏低。变压器与馈线也未显示出不稳定的迹象。80m 偏弱是因为 20m 线在该波段电长度过短，属物理预期，并非缺陷。</p>
+
+      <h3>辐射仰角 — band_angle <span class="conf conf-derived">理论推导 / 模型估计</span></h3>
+      <p>仰角不是直接测量，而是由通联距离经 F2 层单跳球面模型反推，<b>属模型估计值</b>，与方位这类硬数据不同等级，仅作趋势参考。</p>
+      <table class="spec">
+        <tr><th>波段</th><th>中位仰角(估计)</th><th>p10(估计)</th></tr>
+        <tr><td>40m</td><td>≈11.6°</td><td>≈3.7°</td></tr>
+        <tr><td>20m</td><td>≈11.3°</td><td>≈1.1°</td></tr>
+        <tr><td>10m</td><td>≈8.9°</td><td>≈3.1°</td></tr>
+      </table>
+      <p>估计的中位仰角在 11–12° 区间，具备远距离通联所需的低角分量。这一点初看与"天线架得不高（电流腹点在 40m 上仅约 0.18λ）"的直觉相反——一个合理的解释是 25° 的下倾 sloper 结构有助于拉低主瓣仰角，在一定程度上补偿了架设高度的不足。此条结论依赖模型估计，宜作趋势理解，不宜当作精确角度。</p>
+
+      <h3>关于"收不收得到"的检验 — hop_analysis（TX vs RX）<span class="conf conf-measured">实测一致</span></h3>
+      <p>社区中常说 EFHW "被听到但听不到回复"，即接收（RX）是瓶颈。检验方法：对比本台作为发射方与作为接收方时，远距离（>4000km）报文的占比。</p>
+      <table class="spec">
+        <tr><th>距离区间</th><th>作为 TX 占比</th><th>作为 RX 占比</th></tr>
+        <tr><td>双跳 4000–8000km</td><td>8.6%</td><td>25.6%</td></tr>
+        <tr><td>&gt;4000km DX 合计</td><td>20.6%</td><td>29.9%</td></tr>
+      </table>
+      <p>在这个站点上，作为接收方的远距离占比（29.9%）并不低于作为发射方（20.6%），听远的能力与打远相当甚至略强。结合下面的噪声底限观测，这副天线在本站点没有表现出明显的接收瓶颈。需要强调：这并不意味着 PA9X 的观点不成立——他描述的机理（高人为噪声会压低接收能力）本身是合理的，只是其前提（高噪声的城市环境）在本站点似乎并不满足。换一个噪声环境更恶劣的站点，结论很可能不同。</p>
+
+      <h3>噪声底限 — noise_floor <span class="conf conf-measured">实测一致</span></h3>
+      <p>最安静方向能听到约 −23dB 的信号（FT8 解码下限约 −24dB），接近接收灵敏度极限；各方位噪声底限较为均匀，未发现明显的方向性噪声源。综合来看这是一个相对安静的站点，这也解释了上面接收能力不弱的现象。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 第三步：DXCC 交叉印证 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Step 3 · 第三方印证</div>
+    <h2 class="sec-h">交叉印证：用实通联记录再看一遍</h2>
+    <div class="prose">
+      <p>PSK Reporter 报文是"单向被听到"的记录，会受接收台密度影响。而 DXCC 实通联（QSO）是"双向确认成功"的记录，偏差来源不同。把两套数据放在一起看，若同一个几何特征在两者中都留下印记，结论就更可靠。DXCC 国家/地区数量与分布，本身也是业余无线电追求的核心目标之一。</p>
+
+      <h3>同一个几何零点，在两套数据里都出现 <span class="conf conf-measured">实测一致</span></h3>
+      <table class="spec">
+        <tr><th>方向</th><th>单向观测(ΔSNR)</th><th>双向观测(DXCC 实体数)</th><th>几何解释</th></tr>
+        <tr><td>北美 NE ~30°</td><td>0°N 偏低 −3.6dB</td><td>北美 = 10（最少）</td><td>20° 轴向零点</td></tr>
+        <tr><td>非洲 SW ~240°</td><td>240°SW 偏低 −5.4dB</td><td>非洲 = 26（中等）</td><td>200° 零点邻区</td></tr>
+        <tr><td>欧洲 NW ~320°</td><td>300°NW 偏低 −4.8dB</td><td>欧洲 = 49（最多）</td><td>楼体遮挡侧</td></tr>
+      </table>
+      <p>两套数据各有自己的偏差来源（单向偏接收台密度，双向偏对端发射意愿），但在北美 / 非洲方向，两者都指向相对偏弱，且都落在几何零点附近。这种跨数据源的一致性，提高了"几何零点确实存在"这一判断的可信度。</p>
+      <div class="callout">
+        欧洲方向是一个有意思的反差：尽管处在楼体遮挡侧、单向 ΔSNR 偏低，欧洲的 DXCC 实体数却最多（49）。这并不矛盾——欧洲方向的传播机会本身极为丰富，即便天线在该方向不占优，长期积累仍能通联到很多国家。这恰恰说明：<b>被几何压制、但传播本身富集的方向，往往是提升空间最大的方向</b>。
+      </div>
+
+      <h3>如何看待日本方向：需要分开三个因素 <span class="conf conf-derived">理论推导 + 观测</span></h3>
+      <p>一个自然的疑问：ESE 方向数据最密集，到底是天线在该方向强，还是单纯因为日本的 FT8 台站特别多？这需要把三个因素分开来看，避免把任何单一原因绝对化：</p>
+      <ol>
+        <li><b>数量峰值主要来自接收台密度与短路径传播。</b>在 weak_spots 的邻居差分中，ESE 方向并未表现出相对邻居的显著优势——邻居面对的是同样密集的日本台站。这提示 ESE 的报文数量峰值，相当部分来自"日本方向接收台多 + 距离近"，而非本台天线在该方向特别突出。</li>
+        <li><b>但天线确实有一个真实的主瓣朝向 ESE。</b>几何推导的 broadside（约 110°）与实测主瓣（约 100°）都指向 ESE，这是真实存在的方向偏好，只是恰好与日本方向重合，于是两个因素叠加，把该方向的数据进一步放大。</li>
+        <li><b>数量不等于多样性。</b>日本贡献了最多的 QSO 次数，但对应的 DXCC 实体很少（日本及附属少数实体）；而欧洲的 QSO 次数虽少得多，却带来约 49 个实体。就 DXCC 这一目标而言，日本方向的边际增量已经很小。</li>
+      </ol>
+      <p>综合来看，日本方向数据突出，是"天线有真实朝向偏好"与"该方向台站密集"两者叠加的结果，二者都真实存在，不宜归因于单一原因。对于以 DXCC 为目标的操作者，把精力投向传播丰富但目前受几何压制的方向（如欧洲、北美），增量空间可能更大。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 实践启示 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Takeaways</div>
+    <h2 class="sec-h">这副天线给出的实践启示</h2>
+    <div class="prose">
+      <p>把方位翻译成"通联谁"，可以看出这副天线的方向特点：</p>
+      <table class="spec">
+        <tr><th>目标区</th><th>大圆方位</th><th>天线在该方位的状态</th></tr>
+        <tr><td>日本 / 太平洋 / 东南亚</td><td>~100–180° E-S</td><td>主瓣方向，下坡净空，相对较好</td></tr>
+        <tr><td>北美（短路径）</td><td>~30–50° NE</td><td>靠近 20° 轴向零点，相对受抑</td></tr>
+        <tr><td>欧洲</td><td>~310–325° NW</td><td>楼体遮挡侧，相对受抑</td></tr>
+        <tr><td>非洲 / 中东</td><td>~230–250° SW</td><td>200° 零点邻区，相对受抑</td></tr>
+      </table>
+
+      <h3>一个值得分享的观察</h3>
+      <p>综合多组观测，这副 EFHW 本身的状态是健康的：主力波段相对邻居不落后，发射稳定性正常，接收端不受噪声拖累。它表现出的方向性差异，更多来自<b>安装几何与周边环境</b>（导线指向、楼体位置），而非天线或变压器本身的问题。换句话说，若希望开拓欧洲、北美方向，更换更贵的变压器或增加接收设备未必对症；从几何上看，改变导线指向是更直接的思路。</p>
+
+      <h3>按投入产出排序的几点思路</h3>
+      <h4>若主要面向日本 / 太平洋 / 东南亚</h4>
+      <p>现状已较为契合，无需额外硬件投入，可把注意力放在主力波段的日常操作上。</p>
+      <h4>若希望开拓欧洲 / 北美 <span class="conf conf-derived">理论推导，待实测验证</span></h4>
+      <p>这是几何指向问题。一个低成本的思路是增加第二根线来改变主瓣朝向：要让主瓣指向欧洲（约 320°），导线轴需约 50° 或 230°，即从馈电点再拉一根 20m 端馈线，走向东北 50°↔西南 230°，其 broadside 落在 320°（欧洲）与 140°，正好补在当前天线较弱的方向。配一个同轴开关切换即可。需要说明：这是基于几何推导的方案，是否真能带来预期改善，应当在实施后用同样的方法复测确认（见下）。</p>
+      <h4>通用</h4>
+      <ul>
+        <li>适当抬高远端、减小坡度，有望进一步压低主瓣仰角，但不改变方位上的特点。</li>
+        <li>15m（约 1.41λ）的方向图本就较为破碎，该波段方向性会有起伏，这是物理特性而非故障，了解即可。</li>
+      </ul>
+
+      <h3>如何确认改造是否有效（闭环的最后一环）</h3>
+      <figure class="fig">
+<pre>① 改造前：以当前 weak_spots / tx_quality 的 ΔSNR 作为基线
+② 实施改造：例如增加 50°/230° 第二根线
+③ 改造后：对同一呼号、同一邻居网格，重跑同一组端点
+④ 对比 ΔSNR：
+     · 欧洲（300° NW）扇区若由 −4.8 明显回升，说明改造见效，并可量化
+     · 主力方向（90° E）扇区不应下降，确认未牺牲强项
+⑤ 邻居差分自动剥离传播与季节变量，ΔSNR 的变化主要反映改造本身</pre>
+        <figcaption>不依赖主观感受，而是用对同网格邻居的 ΔSNR 变化来客观度量改造效果</figcaption>
+      </figure>
+      <p>这正是整套方法想补上的一环：天线改造的效果，不再靠"感觉信号变好了"来判断，而是有一把可复现的尺子。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 局限与诚实声明 -->
+<section>
+  <div class="container narrow">
+    <div class="sec-tag">Limitations</div>
+    <h2 class="sec-h">本案例的局限 <span class="conf conf-open">阶段观察</span></h2>
+    <div class="prose">
+      <p>本着对读者负责，把这次观测的边界讲清楚：</p>
+      <ul>
+        <li><b>仰角是模型估计，不是测量。</b>所有仰角数字来自距离反推的单跳球面模型，混合模式与多跳会带来偏差，宜作趋势看待。</li>
+        <li><b>效率是相对量，不是绝对量。</b>本文从未声称测得了绝对辐射效率，所有"不落后/略优"都是相对同网格邻居而言。</li>
+        <li><b>部分波段样本较薄。</b>30m、17m、12m 等波段样本仅几十到几百条，其 ΔSNR 噪声较大，相关结论仅供参考。</li>
+        <li><b>2026 年数据存在待解释的异常。</b>2026 部分年数据中 40m 主瓣方位漂移、方向集中度极低（接近无相干主瓣），与 2025 全年数据明显不同。结合其样本稀疏，目前更倾向于将其视为稀疏样本下的统计漂移，暂以 2025 全年数据为可信基线；待 2026 全年数据补齐后再行确认。在此之前，不就此下结论。</li>
+        <li><b>这是单站点、单天线的一次观测。</b>本文所有结论都是关于 BG1SB 这一副天线、这一处环境的，不宜直接外推到其他站点。方法可以借鉴，数字不可照搬。</li>
+      </ul>
+      <div class="callout">
+        这次观测之所以有意义，不在于得到了多么确定的结论，而在于演示了一条<b>可复现、可检验的路径</b>：从几何推导出预测，用公开数据去检验，用第三方记录去交叉印证，并坦诚标注每一步的依据强度。欢迎其他爱好者用同样的方法观测自己的天线——结论可能不同，方法是共通的。
+      </div>
+      <p style="margin-top:24px">想对自己的天线走一遍同样的流程？可在 <a href="http://radio.vlsc.net:5000/antenna" target="_blank" rel="noopener">radio.vlsc.net:5000/antenna</a> 体验完整分析看板。方法说明见 <a href="data.html">数据方法论</a>。</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="fnav">
+      <a href="index.html">首页</a>
+      <a href="principle.html">原理</a>
+      <a href="build.html">制作</a>
+      <a href="performance.html">性能讨论</a>
+      <a href="data.html">数据方法</a>
+      <a href="case.html">实测案例</a>
+      <a href="tuner-vs-unun.html">对比试验</a>
+    </div>
+    <p>📡 EFHW 端馈半波天线知识体系 · 由 <b>BG1SB</b> 制作 · <a href="https://www.vlsc.net/">www.vlsc.net</a></p>
+    <p style="margin-top:8px">本案例基于 PSK Reporter 开放数据与本台实通联记录 · 观测有边界，方法可复现 · 73！</p>
+  </div>
+</footer>
+
+</body>
+</html>
