@@ -157,8 +157,14 @@
             <a href="/advanced" class="{% if active_page == 'advanced' %}active{% endif %}">
                 <span class="icon">🔬</span> 深度分析
             </a>
+            <a href="/recommendations" class="{% if active_page == 'recommendations' %}active{% endif %}">
+                <span class="icon">🎯</span> DXCC 推荐
+            </a>
             <a href="/antenna" class="{% if active_page == 'antenna' %}active{% endif %}">
                 <span class="icon">📡</span> 天线分析
+            </a>
+            <a href="/efhw-ab" class="{% if active_page == 'efhw_ab' %}active{% endif %}">
+                <span class="icon">📊</span> A/B 对比
             </a>
         </div>
         <button class="hamburger" onclick="document.querySelector('.mobile-nav-overlay').classList.toggle('open')" aria-label="菜单">
@@ -180,8 +186,14 @@
         <a href="/advanced" class="{% if active_page == 'advanced' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
             <span class="icon">🔬</span> 深度分析
         </a>
+        <a href="/recommendations" class="{% if active_page == 'recommendations' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">🎯</span> DXCC 推荐
+        </a>
         <a href="/antenna" class="{% if active_page == 'antenna' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
             <span class="icon">📡</span> 天线分析
+        </a>
+        <a href="/efhw-ab" class="{% if active_page == 'efhw_ab' %}active{% endif %}" onclick="this.parentElement.classList.remove('open')">
+            <span class="icon">📊</span> A/B 对比
         </a>
     </div>
     

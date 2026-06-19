@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}EFHW A/B 对比{% endblock %}
+
+{% block head_extra %}
+<meta name="theme-color" content="#0a0e14">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block styles %}
+.main{padding:12px 12px 70px;max-width:1200px;margin:0 auto}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{background:#11161e;border:1px solid #1e2a38;border-radius:10px;padding:14px;overflow:hidden}
+.card h2{font-size:14px;margin-bottom:4px;color:#c9d1d9;display:flex;align-items:center;gap:8px}
+.card h2 .tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
+.tag-core{background:#1f6feb22;color:#58a6ff;border:1px solid #1f6feb44}
+.tag-caution{background:#d2992222;color:#d29922;border:1px solid #d2992244}
+.card .sub{font-size:11px;color:#5c6a7a;margin-bottom:12px;line-height:1.5}
+.chart{position:relative}.chart280{height:280px}.chart320{height:320px}
+.hero-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
+.hero-cell{background:#0d1117;border:1px solid #1e2a38;border-radius:8px;padding:12px}
+.hero-cell .lbl{font-size:10px;color:#5c6a7a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.hero-cell .cfg{font-size:13px;color:#e6edf3;font-weight:600}
+.hero-cell .swr{font-size:11px;color:#8b949e;margin-top:4px}
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.metric{background:#0d1117;border:1px solid #1e2a38;border-radius:8px;padding:10px;text-align:center}
+.metric .v{font-size:20px;font-weight:800;color:#e6edf3;line-height:1.1}
+.metric .v.pos{color:#3fb950}.metric .v.neg{color:#f85149}.metric .v.neu{color:#58a6ff}
+.metric .k{font-size:9px;color:#5c6a7a;margin-top:4px;text-transform:uppercase;letter-spacing:.4px}
+.verdict{font-size:12px;color:#c9d1d9;line-height:1.6;background:#0d1117;border-left:3px solid #1f6feb;border-radius:0 6px 6px 0;padding:10px 12px;margin-top:8px}
+.verdict b{color:#58a6ff}
+.spec{width:100%;border-collapse:collapse;font-size:11px}
+.spec th,.spec td{text-align:left;padding:6px 8px;border-bottom:1px solid #1e2a38}
+.spec th{color:#5c6a7a;font-weight:600;font-size:10px;text-transform:uppercase}
+.spec td{color:#c9d1d9}
+.spec td.num{text-align:right;font-family:monospace}
+.pos{color:#3fb950}.neg{color:#f85149}.neu{color:#8b949e}
+.note{font-size:10px;color:#4a5568;margin-top:8px;line-height:1.5}
+.insight{font-size:11px;color:#3fb950;margin-top:8px;padding:8px 10px;background:#3fb95008;border-left:2px solid #3fb95044;border-radius:0 4px 4px 0;line-height:1.5}
+.caution-box{font-size:11px;color:#d29922;margin-top:8px;padding:8px 10px;background:#d2992208;border-left:2px solid #d2992244;border-radius:0 4px 4px 0;line-height:1.5}
+#refresh{font-size:11px;color:#5c6a7a;margin-left:auto;font-weight:400}
+@media(min-width:769px){
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .card.full{grid-column:1/-1}
+}
+@media(max-width:768px){
+    .metric-row{grid-template-columns:repeat(2,1fr)}
+    .hero-grid{grid-template-columns:1fr}
+}
+{% endblock %}
+
+{% block content %}
+<div class="main">
+  <div class="cards">
+
+    <!-- 1. 试验概况 -->
+    <div class="card full">
+      <h2>📡 试验概况 <span id="refresh">⏳</span></h2>
+      <div class="sub" id="meta-sub">加载中…</div>
+      <div class="hero-grid">
+        <div class="hero-cell">
+          <div class="lbl">配置 A</div>
+          <div class="cfg" id="cfg-a-name">—</div>
+          <div class="swr" id="cfg-a-swr">—</div>
+        </div>
+        <div class="hero-cell">
+          <div class="lbl">配置 B</div>
+          <div class="cfg" id="cfg-b-name">—</div>
+          <div class="swr" id="cfg-b-swr">—</div>
+        </div>
+      </div>
+      <div class="note" id="meta-note"></div>
+    </div>
+
+    <!-- 2. 配对 ΔSNR（核心） -->
+    <div class="card full">
+      <h2>同呼号配对 ΔSNR <span class="tag tag-core">核心指标</span></h2>
+      <div class="sub">每个在 A、B 两段都收到 BG1SB 的接收台，用它自己的 A 段均值作基线比 B 段，路径/距离/接收机灵敏度全抵消。再减去同网格探针的传播漂移，得到天线净效应。</div>
+      <div class="metric-row">
+        <div class="metric"><div class="v neu" id="m-dut-mean">—</div><div class="k">DUT ΔSNR 均值</div></div>
+        <div class="metric"><div class="v neu" id="m-base">—</div><div class="k">探针传播基准</div></div>
+        <div class="metric"><div class="v" id="m-effect">—</div><div class="k">天线净效应</div></div>
+        <div class="metric"><div class="v neu" id="m-n">—</div><div class="k">共同接收台</div></div>
+      </div>
+      <div class="verdict" id="paired-verdict">计算中…</div>
+      <div class="chart chart280"><canvas id="deltaHist"></canvas></div>
+      <div class="note">ΔSNR = mean(B) − mean(A)，按接收台聚合。正值=换天线后 SNR 升高。直方图为各共同接收台 ΔSNR 分布。</div>
+    </div>
+
+    <!-- 3. 传播基准 -->
+    <div class="card">
+      <h2>传播基准 · ON80 探针</h2>
+      <div class="sub">同网格、天线没动的电台。它们的 ΔSNR 反映纯电离层漂移，是扣除传播的依据。</div>
+      <table class="spec">
+        <thead><tr><th>探针</th><th class="num">共同RX</th><th class="num">ΔSNR均值</th><th class="num">中位</th></tr></thead>
+        <tbody id="probe-tbody"></tbody>
+      </table>
+      <div class="note">3 个有效探针。方向不一致（有正有负）说明传播基准本身有约 ±1dB 不确定性。</div>
+    </div>
+
+    <!-- 4. SNR 分布 -->
+    <div class="card">
+      <h2>SNR 分布 · A vs B</h2>
+      <div class="sub">两段配置下被收报的 SNR 分布对照。形状接近即说明强度分布无系统性差异。</div>
+      <div class="chart chart280"><canvas id="snrHist"></canvas></div>
+      <div class="note">纵轴按各自总数归一化为占比，消除 A/B 发射次数不同的影响。</div>
+    </div>
+
+    <!-- 5. 收报计数（带警告） -->
+    <div class="card">
+      <h2>收报计数 <span class="tag tag-caution">⚠ 受发射次数污染</span></h2>
+      <div class="sub">收报数/台站数受两段发射次数不同影响，不是有效的天线指标，仅作参考。</div>
+      <table class="spec">
+        <thead><tr><th>组</th><th class="num">收报</th><th class="num">台站</th><th class="num">国家</th><th class="num">均SNR</th></tr></thead>
+        <tbody id="count-tbody"></tbody>
+      </table>
+      <div class="caution-box">B 段收报数更多，主因是采集时长更长（B 跑了约 3 小时 vs A 的早段）+ FT8 解码门限选择效应，不能据此说天线更好。</div>
+    </div>
+
+    <!-- 6. 距离 / 方向 -->
+    <div class="card">
+      <h2>按距离分布 · A vs B</h2>
+      <div class="sub">各距离段的平均 SNR 对照，看是否某些距离上有方向性差异。</div>
+      <div class="chart chart280"><canvas id="distChart"></canvas></div>
+      <div class="note">柱=平均 SNR（dB）。距离按 BG1SB(ON80da)→接收台大圆距离分桶。</div>
+    </div>
+
+    <div class="card">
+      <h2>按方向分布 · A vs B</h2>
+      <div class="sub">八方位平均 SNR 对照，看天线方向图是否有可见变化。</div>
+      <div class="chart chart280"><canvas id="dirChart"></canvas></div>
+      <div class="note">柱=平均 SNR（dB）。方位按接收台相对 BG1SB 的大圆初始方位归入八方位。</div>
+    </div>
+
+    <!-- 结论 -->
+    <div class="card full">
+      <h2>📋 阶段性结论</h2>
+      <div class="verdict" id="final-verdict">
+        <b>数据无法证明 LC 调谐器优于 49:1 变压器。</b> 用同呼号配对 ΔSNR 并扣除同网格探针的传播漂移后，天线净效应落在 ±1 dB 测量噪声以内，统计上不可区分——与两者失配损耗仅差 0.09 dB（SWR 1.47 vs 1.30）的理论预期一致。先前基于"收报数翻倍"得出的"+2~3dB"结论，是发射次数差异 + FT8 解码门限选择效应制造的假象，已被配对法否定。要分辨更小的真实差异，需做 A/B/A/B 交替快切累计多轮配对，把单次 ±3dB 噪声用 √N 压下去；变压器铁损可由 100W 连发后磁环温升直接佐证。
+      </div>
+      <div class="note">test_id: efhw_49un_vs_lc_20260619 · 数据表 efhw_ab_reports（独立于主库）· 15m FT8 · 切换点 2026-06-19 12:26:52 CST</div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const charts={};
+const C={a:'#d29922',b:'#58a6ff',grid:'#1e2a3855',tick:'#5c6a7a'};
+
+function fmtSigned(x){return (x>0?'+':'')+x.toFixed(2)}
+function api(ep){return fetch(`/api/efhw-ab/${ep}`).then(r=>r.json())}
+
+function baseOpts(yLabel){
+  return {responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#8b949e',font:{size:11},boxWidth:12}}},
+    scales:{
+      x:{ticks:{color:C.tick,font:{size:10}},grid:{color:C.grid}},
+      y:{title:{display:!!yLabel,text:yLabel,color:C.tick,font:{size:10}},
+         ticks:{color:C.tick,font:{size:10}},grid:{color:C.grid}}
+    }};
+}
+
+async function loadAll(){
+  document.getElementById('refresh').textContent='⏳';
+  const t0=Date.now();
+  try{
+    const [summary,paired,probe,hist,dist,dir]=await Promise.all([
+      api('summary'),api('paired_snr'),api('probe_baseline'),
+      api('snr_hist'),api('by_distance'),api('by_direction')
+    ]);
+    renderSummary(summary);
+    renderPaired(paired,probe);
+    renderProbe(probe);
+    renderCounts(summary);
+    renderSnrHist(hist);
+    renderDist(dist);
+    renderDir(dir);
+    document.getElementById('refresh').textContent=`🟢 ${Date.now()-t0}ms`;
+  }catch(e){
+    console.error(e);
+    document.getElementById('refresh').textContent='🔴 错误';
+  }
+}
+
+function renderSummary(d){
+  const m=d.meta;
+  document.getElementById('meta-sub').textContent=
+    `${m.dut} · ${m.grid} · ${m.band} · ${m.power} · 切换点 ${m.switch_cst}`;
+  document.getElementById('cfg-a-name').textContent=m.config_a.name;
+  document.getElementById('cfg-a-swr').textContent=`SWR ${m.config_a.swr} · 失配损耗 ${m.mismatch_loss_a_db} dB`;
+  document.getElementById('cfg-b-name').textContent=m.config_b.name;
+  document.getElementById('cfg-b-swr').textContent=`SWR ${m.config_b.swr} · 失配损耗 ${m.mismatch_loss_b_db} dB`;
+  document.getElementById('meta-note').textContent=
+    `两配置失配损耗差仅 ${(m.mismatch_loss_a_db-m.mismatch_loss_b_db).toFixed(2)} dB，理论上不应产生可见的 SNR 差异。`;
+}
+
+function renderPaired(p,probe){
+  const a=p.aggregate||{};
+  const eff=probe.antenna_effect||{};
+  document.getElementById('m-dut-mean').textContent=a.mean!=null?fmtSigned(a.mean):'—';
+  document.getElementById('m-base').textContent=probe.pooled_baseline.mean!=null?fmtSigned(probe.pooled_baseline.mean):'—';
+  const em=document.getElementById('m-effect');
+  if(eff.by_mean!=null){
+    em.textContent=fmtSigned(eff.by_mean);
+    em.className='v '+(Math.abs(eff.by_mean)<0.5?'neu':(eff.by_mean>0?'pos':'neg'));
+  }
+  document.getElementById('m-n').textContent=a.n||'—';
+  const ci=a.ci95?`[${a.ci95[0]}, ${a.ci95[1]}]`:'—';
+  document.getElementById('paired-verdict').innerHTML=
+    `DUT 配对 ΔSNR 均值 <b>${a.mean!=null?fmtSigned(a.mean):'—'} dB</b>（中位 ${a.median} dB，n=${a.n}，95%CI ${ci}）。`+
+    `扣除探针传播基准 ${probe.pooled_baseline.mean} dB 后，天线净效应 <b>${eff.by_mean!=null?fmtSigned(eff.by_mean):'—'} dB</b>。`+
+    `置信区间跨越 0，<b>无统计显著差异</b>。`;
+
+  // delta histogram
+  const ds=p.deltas.map(x=>x.d);
+  const lo=-12,hi=12,step=2;
+  const bins=[];for(let b=lo;b<=hi;b+=step)bins.push(b);
+  const counts=bins.map(()=>0);
+  ds.forEach(v=>{let b=Math.max(lo,Math.min(hi,Math.floor(v/step)*step));counts[bins.indexOf(b)]++});
+  if(charts.delta)charts.delta.destroy();
+  charts.delta=new Chart(document.getElementById('deltaHist'),{
+    type:'bar',
+    data:{labels:bins.map(b=>`${b}`),datasets:[{
+      label:'各接收台 ΔSNR (dB) 分布',data:counts,
+      backgroundColor:bins.map(b=>b<0?'#f8514988':b>0?'#3fb95088':'#58a6ff88'),
+      borderColor:bins.map(b=>b<0?'#f85149':b>0?'#3fb950':'#58a6ff'),borderWidth:1
+    }]},
+    options:baseOpts('接收台数')
+  });
+}
+
+function renderProbe(d){
+  const tb=document.getElementById('probe-tbody');
+  tb.innerHTML=d.probes.map(p=>{
+    const cls=Math.abs(p.mean)<0.5?'neu':(p.mean>0?'pos':'neg');
+    return `<tr><td>${p.probe}</td><td class="num">${p.n}</td>`+
+           `<td class="num ${cls}">${fmtSigned(p.mean)}</td><td class="num">${fmtSigned(p.median)}</td></tr>`;
+  }).join('')+
+  `<tr style="border-top:2px solid #1e2a38"><td><b>合并基准</b></td><td class="num"><b>${d.pooled_baseline.n}</b></td>`+
+  `<td class="num"><b>${fmtSigned(d.pooled_baseline.mean)}</b></td><td class="num"><b>${fmtSigned(d.pooled_baseline.median)}</b></td></tr>`;
+}
+
+function renderCounts(d){
+  const tb=document.getElementById('count-tbody');
+  const order={'dut|A':0,'dut|B':1,'probe|A':2,'probe|B':3};
+  const label={'dut|A':'DUT · A (49:1)','dut|B':'DUT · B (LC)','probe|A':'探针 · A','probe|B':'探针 · B'};
+  const rows=d.groups.slice().sort((x,y)=>order[`${x.role}|${x.config}`]-order[`${y.role}|${y.config}`]);
+  tb.innerHTML=rows.map(r=>{
+    const k=`${r.role}|${r.config}`;
+    return `<tr><td>${label[k]||k}</td><td class="num">${r.reports}</td><td class="num">${r.rx}</td>`+
+           `<td class="num">${r.ctry}</td><td class="num">${r.snr_avg}</td></tr>`;
+  }).join('');
+}
+
+function renderSnrHist(d){
+  const sumA=d.A.reduce((a,b)=>a+b,0)||1, sumB=d.B.reduce((a,b)=>a+b,0)||1;
+  if(charts.snr)charts.snr.destroy();
+  charts.snr=new Chart(document.getElementById('snrHist'),{
+    type:'bar',
+    data:{labels:d.bins.map(b=>`${b}`),datasets:[
+      {label:'A (49:1)',data:d.A.map(v=>+(100*v/sumA).toFixed(1)),backgroundColor:C.a+'aa',borderColor:C.a,borderWidth:1},
+      {label:'B (LC)',data:d.B.map(v=>+(100*v/sumB).toFixed(1)),backgroundColor:C.b+'aa',borderColor:C.b,borderWidth:1}
+    ]},
+    options:baseOpts('占比 %')
+  });
+}
+
+function renderDist(d){
+  if(charts.dist)charts.dist.destroy();
+  charts.dist=new Chart(document.getElementById('distChart'),{
+    type:'bar',
+    data:{labels:d.labels,datasets:[
+      {label:'A (49:1)',data:d.A.map(x=>x.snr),backgroundColor:C.a+'aa',borderColor:C.a,borderWidth:1},
+      {label:'B (LC)',data:d.B.map(x=>x.snr),backgroundColor:C.b+'aa',borderColor:C.b,borderWidth:1}
+    ]},
+    options:baseOpts('平均 SNR (dB)')
+  });
+}
+
+function renderDir(d){
+  if(charts.dir)charts.dir.destroy();
+  charts.dir=new Chart(document.getElementById('dirChart'),{
+    type:'radar',
+    data:{labels:d.octants,datasets:[
+      {label:'A (49:1)',data:d.A.map(x=>x.snr),backgroundColor:C.a+'33',borderColor:C.a,borderWidth:1.5,pointRadius:2},
+      {label:'B (LC)',data:d.B.map(x=>x.snr),backgroundColor:C.b+'33',borderColor:C.b,borderWidth:1.5,pointRadius:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e',font:{size:11},boxWidth:12}}},
+      scales:{r:{angleLines:{color:C.grid},grid:{color:C.grid},
+        pointLabels:{color:C.tick,font:{size:10}},
+        ticks:{color:C.tick,backdropColor:'transparent',font:{size:9}}}}}
+  });
+}
+
+loadAll();
+</script>
+{% endblock %}

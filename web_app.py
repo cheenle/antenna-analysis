@@ -18,9 +18,14 @@ from dxcc_lookup import (
 )
 # Shared band definitions (single source of truth)
 import band_utils
+from propagation_recommender import build_recommendations, summarize_space_weather
 
 app = Flask(__name__)
 CORS(app)
+
+# EFHW A/B 对比看板（独立 Blueprint，自包含路由 + API，数据在 efhw_ab_reports 表）
+from efhw_ab_dashboard import efhw_ab_bp
+app.register_blueprint(efhw_ab_bp)
 
 # 数据库配置 (StarRocks)
 DB_CONFIG = {
@@ -1379,7 +1384,7 @@ def get_all_table(year=None):
     return 'all_records'
 
 SUMMARY_TABLE = 'psk_hdf5_summary'
-SUMMARY_2026 = 'all_records_summary'
+SUMMARY_2026 = 'all_records_summary_p1'
 RAW_2025_PARTITIONS = ['p202501', 'p202502', 'p202503', 'p202504']
 
 def get_summary_table(year):
@@ -2124,6 +2129,152 @@ def get_space_weather():
         result = {"data": rows, "count": len(rows)}
         ALL_CACHE.set(cache_key, result, ttl=300)  # 空间天气每日一变，缓存 5 分钟
 
+        resp = jsonify(result)
+        resp.headers['X-Cache'] = 'MISS'
+        resp.headers['Cache-Control'] = 'public, max-age=300'
+        return resp
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def _hours_since(value):
+    """Return age in hours for a date/datetime value using UTC as reference."""
+    if not value:
+        return 9999
+    if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
+        value = datetime.datetime.combine(value, datetime.time.min)
+    if value.tzinfo is not None:
+        value = value.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    delta = datetime.datetime.utcnow() - value
+    return max(0, delta.total_seconds() / 3600)
+
+
+def _latest_space_weather_for_recommendations(cursor):
+    """Fetch latest weather values and flatten them for recommendation scoring."""
+    raw = {}
+
+    cursor.execute("""
+        SELECT observation_date, f107_flux
+        FROM solar_activity
+        WHERE f107_flux IS NOT NULL
+        ORDER BY observation_date DESC
+        LIMIT 1
+    """)
+    row = cursor.fetchone() or {}
+    if row.get('f107_flux') is not None:
+        raw['f107'] = {
+            "value": float(row['f107_flux']),
+            "age_hours": _hours_since(row.get('observation_date')),
+        }
+
+    cursor.execute("""
+        SELECT measurement_time, kp_value
+        FROM geomagnetic_indices
+        WHERE kp_value IS NOT NULL
+        ORDER BY measurement_time DESC
+        LIMIT 1
+    """)
+    row = cursor.fetchone() or {}
+    if row.get('kp_value') is not None:
+        raw['kp'] = {
+            "value": float(row['kp_value']),
+            "age_hours": _hours_since(row.get('measurement_time')),
+        }
+
+    cursor.execute("""
+        SELECT measurement_time, bt, bz, proton_speed
+        FROM solar_wind
+        WHERE measurement_time IS NOT NULL
+        ORDER BY measurement_time DESC
+        LIMIT 1
+    """)
+    row = cursor.fetchone() or {}
+    if row:
+        age = _hours_since(row.get('measurement_time'))
+        if row.get('bt') is not None:
+            raw['bt'] = {"value": float(row['bt']), "age_hours": age}
+        if row.get('bz') is not None:
+            raw['bz'] = {"value": float(row['bz']), "age_hours": age}
+        if row.get('proton_speed') is not None:
+            raw['solar_wind_speed'] = {"value": float(row['proton_speed']), "age_hours": age}
+
+    return summarize_space_weather(raw)
+
+
+@app.route('/recommendations')
+def recommendations_page():
+    """DXCC opportunity recommendation dashboard."""
+    return render_template('recommendations.html', active_page='recommendations')
+
+
+@app.route('/api/recommendations')
+def get_recommendations():
+    """Return ranked DXCC opportunities based on local PSK evidence."""
+    callsign = request.args.get('callsign', CALLSIGN).upper()
+    days = min(max(int(request.args.get('days', 120)), 7), 365)
+    limit = min(max(int(request.args.get('limit', 20)), 1), 50)
+
+    cache_key = f"recommendations:c{callsign}:d{days}:l{limit}"
+    cached = ALL_CACHE.get(cache_key)
+    if cached is not None:
+        resp = jsonify(cached)
+        resp.headers['X-Cache'] = 'HIT'
+        resp.headers['Cache-Control'] = 'public, max-age=300'
+        return resp
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "数据库连接失败"}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT DISTINCT country
+            FROM qso_log
+            WHERE station_callsign = %s
+              AND country IS NOT NULL
+              AND country <> ''
+        """, (callsign,))
+        worked = {row['country'] for row in cursor.fetchall() if row.get('country')}
+
+        cursor.execute("""
+            SELECT country, receiver_callsign as callsign, frequency, snr, qso_time
+            FROM sender_records
+            WHERE sender_callsign = %s
+              AND qso_time >= DATE_SUB(NOW(), INTERVAL %s DAY)
+              AND country IS NOT NULL
+              AND country <> ''
+        """, (callsign, days))
+        sender_rows = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT country, sender_callsign as callsign, frequency, snr, qso_time
+            FROM receiver_records
+            WHERE receiver_callsign = %s
+              AND qso_time >= DATE_SUB(NOW(), INTERVAL %s DAY)
+              AND country IS NOT NULL
+              AND country <> ''
+        """, (callsign, days))
+        receiver_rows = cursor.fetchall()
+
+        weather = _latest_space_weather_for_recommendations(cursor)
+        result = build_recommendations(
+            worked_countries=worked,
+            sender_rows=sender_rows,
+            receiver_rows=receiver_rows,
+            space_weather=weather,
+            limit=limit,
+        )
+        result.update({
+            "callsign": callsign,
+            "days": days,
+            "space_weather": weather,
+            "tx_rows": len(sender_rows),
+            "rx_rows": len(receiver_rows),
+        })
+
+        ALL_CACHE.set(cache_key, result, ttl=300)
         resp = jsonify(result)
         resp.headers['X-Cache'] = 'MISS'
         resp.headers['Cache-Control'] = 'public, max-age=300'
@@ -3629,7 +3780,7 @@ def antenna_weak_spots():
     table, partitions = get_raw_table_and_partitions(year)
     from_c = table
 
-    cache_key = f"ant_weak:{year}:{call}"
+    cache_key = f"ant_weak:v2:{year}:{call}"
     cached = ANTENNA_CACHE.get(cache_key)
     if cached is not None: resp = jsonify(cached); resp.headers['X-Cache'] = 'HIT'; return resp
 
@@ -3693,9 +3844,7 @@ def antenna_weak_spots():
 
         # Compute ΔSNR for each (band, sector)
         results = []
-        # Correctly map 0=N, 30=NNE, 60=ENE, 90=E, 120=ESE, 150=SSE, 180=S, 210=SSW, 240=WSW, 270=W, 300=WNW, 330=NNW
-        # Or simpler 8 directions mapping: index = int(((sector + 22.5) % 360) // 45)
-        d8 = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+        d12 = ['N', 'NNE', 'ENE', 'E', 'ESE', 'SSE', 'S', 'SSW', 'WSW', 'W', 'WNW', 'NNW']
         for (band, sector), m in my_data.items():
             if m['count'] < 50: continue  # 提高样本阈值，过滤掉零星波段
             p = peer_data.get((band, sector), {'snr_sum': 0, 'count': 0})
@@ -3703,8 +3852,7 @@ def antenna_weak_spots():
             my_snr = round(m['snr_sum'] / m['count'], 1)
             peer_snr = round(p['snr_sum'] / p['count'], 1)
             delta = round(my_snr - peer_snr, 1)
-            dir_index = int(((sector + 22.5) % 360) // 45)
-            direction = f'{sector}° ({d8[dir_index]})'
+            direction = f'{sector}° ({d12[(sector // 30) % 12]})'
             results.append({
                 'band': band, 'sector': sector, 'direction': direction,
                 'my_snr': my_snr, 'peer_snr': peer_snr, 'delta': delta,
@@ -3712,10 +3860,10 @@ def antenna_weak_spots():
             })
 
         # Sort by delta (worst first)
-        results.sort(key=lambda x: x['delta'])
+        worst_first = sorted(results, key=lambda x: x['delta'])
         
         # 找出最弱的 (波段 + 方向) 组合，而不是按方向平均所有波段
-        losses = [r for r in results if r['delta'] < -2.0]  # at least 2dB worse
+        losses = [r for r in worst_first if r['delta'] < -2.0]  # at least 2dB worse
         top_losses = losses[:8]
 
         # Top 4 weakest specific combination (band + direction)
@@ -3750,6 +3898,9 @@ def antenna_weak_spots():
         avg_delta_all = round(sum(r['delta'] for r in results) / max(len(results), 1), 1)
         significant_losses = len([r for r in results if r['delta'] <= -3.0])
         total_compared = len(results)
+        band_order = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m', 'Other']
+        present_bands = sorted({r['band'] for r in results}, key=lambda b: band_order.index(b) if b in band_order else 99)
+        sectors_out = [{'sector': s, 'label': f'{s}° {d12[(s // 30) % 12]}'} for s in range(0, 360, 30)]
 
         summary = (
             f'📡 {call} 天线综合诊断：与{grid_prefix}网格邻居对比，'
@@ -3766,7 +3917,13 @@ def antenna_weak_spots():
             'total_compared': total_compared, 'significant_losses': significant_losses,
             'top_losses': top_losses,
             'top4_directions': recommendations, # Reusing the field name for frontend compatibility
-            'all_results': sorted(results, key=lambda x: x['delta'])[:30]  # top 30 worst
+            'bands': present_bands,
+            'sectors': sectors_out,
+            'all_results': sorted(results, key=lambda x: (
+                band_order.index(x['band']) if x['band'] in band_order else 99,
+                x['sector']
+            )),
+            'worst_results': worst_first[:30]
         }
 
         ANTENNA_CACHE.set(cache_key, result)
